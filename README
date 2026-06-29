@@ -1,0 +1,224 @@
+# 🎮 Terraria Server Manager
+
+A Java + Spring Boot application to manage Terraria server instances — start, stop, monitor, and control your game servers from a web dashboard.
+
+---
+
+## 📦 Project Overview
+
+Build a full-stack server management panel, phase by phase. Start simple (single server, no DB, no auth), then layer on features until it's a production-ready hosting tool.
+
+---
+
+## 🗺️ Roadmap
+
+### ✅ Phase 1 — Single Server Controller (Core MVP)
+
+> *Your first real milestone.*
+
+**Goal:** Start and stop a Terraria server from Java.
+
+#### Backend (Spring Boot)
+
+One core class: **`GameServerProcess`**
+
+| Method          | Purpose                        |
+|-----------------|--------------------------------|
+| `start()`       | Launch the server process      |
+| `stop()`        | Kill the process gracefully    |
+| `isRunning()`   | Check if process is alive      |
+| `getStatus()`   | Return current server state    |
+
+**Internally:**
+- Uses `ProcessBuilder`
+- Stores a `Process` reference
+- Reads stdout/stderr
+
+#### REST API
+
+| Method | Endpoint          | Description              |
+|--------|-------------------|--------------------------|
+| POST   | `/server/start`   | Start the server         |
+| POST   | `/server/stop`    | Stop the server          |
+| GET    | `/server/status`  | Get current status       |
+| GET    | `/server/logs`    | View logs (optional MVP) |
+
+#### Phase 1 Rules
+- ✅ **Only one** server instance
+- ❌ No database
+- ❌ No authentication
+- ❌ No Docker
+
+> Just make it work **reliably**.
+
+---
+
+### 🚧 Phase 2 — Basic Web UI (Control Panel)
+
+Build a simple frontend (plain HTML + JS or Thymeleaf).
+
+#### UI Shows
+- **Status:** Running / Stopped
+- **Button:** Start
+- **Button:** Stop
+- **Console log view** (polling is fine at first)
+
+#### Data Flow
+```
+UI → REST API → Java Backend → ProcessBuilder → Terraria
+```
+
+> At this point, it already feels like a **real tool**.
+
+---
+
+### 🚧 Phase 3 — Live Logs (Real-Time Feel)
+
+Upgrade the weakest part of Phase 2.
+
+| Before (Polling) | After (WebSocket) |
+|------------------|-------------------|
+| Page refreshes every N seconds | Live stream of stdout |
+| Stale log view | Console updates in real time |
+
+- **Backend:** Streams process stdout in real time via WebSocket
+- **Frontend:** Console updates live
+
+> Now it feels like a *real server panel*.
+
+---
+
+### 🚧 Phase 4 — Server State Tracking (Robustness)
+
+Add internal state management.
+
+#### States
+| State       | Meaning                          |
+|-------------|----------------------------------|
+| `RUNNING`   | Process is alive and healthy     |
+| `STOPPED`   | Process is not running           |
+| `STARTING`  | Process is being launched        |
+| `CRASHED`   | Process died unexpectedly        |
+
+**Also detect:**
+- Unexpected process death → auto-update status
+- Manual restart via button
+
+> Now it becomes **reliable**.
+
+---
+
+### 🚧 Phase 5 — Multiple Server Instances (Real Product)
+
+Scale from one server to many.
+
+#### Entity: `GameServerInstance`
+
+| Field             | Type          |
+|-------------------|---------------|
+| `id`              | Long/UUID     |
+| `name`            | String        |
+| `port`            | int           |
+| `path`            | String (filesystem) |
+| `process`         | Process reference |
+| `status`          | ServerState enum |
+
+#### New API
+
+| Method | Endpoint                 | Description              |
+|--------|--------------------------|--------------------------|
+| POST   | `/servers`               | Register a new server    |
+| POST   | `/servers/{id}/start`    | Start server by ID       |
+| POST   | `/servers/{id}/stop`     | Stop server by ID        |
+| GET    | `/servers`               | List all servers         |
+
+#### UI Becomes a List
+```
+Server 1  →  [Start] [Stop] [Logs]
+Server 2  →  [Start] [Stop] [Logs]
+Server 3  →  [Start] [Stop] [Logs]
+```
+
+> This is where it starts looking like a **real hosting panel**.
+
+---
+
+### 🚧 Phase 6 — Persistence (PostgreSQL)
+
+Store data so the system survives restarts.
+
+**What gets stored:**
+- Server configurations
+- History / audit log
+- Logs (optional)
+
+**Stack additions:**
+- Spring Data JPA
+- PostgreSQL
+
+> Now your system **survives restarts**.
+
+---
+
+### 🚧 Phase 7 — Polish Features (Portfolio Boosters)
+
+Pick and choose:
+
+| Feature                      | Description                                  |
+|------------------------------|----------------------------------------------|
+| 📦 Scheduled Backups         | Zip world folder on a timer                  |
+| 🔄 Auto-Restart on Crash     | Detect crash, restart automatically          |
+| 🔐 User Login                | Spring Security + JWT authentication         |
+| 🤖 Discord Integration       | `/status`, `/restart` bot commands           |
+| 🐳 Docker Deployment         | Containerize the whole stack                 |
+
+---
+
+## ⚠️ What NOT to Do (Yet)
+
+Avoid these early — they will **slow you down massively**:
+
+- ❌ Multiple game support (Terraria only)
+- ❌ Fancy UI frameworks (React/Vue/etc.)
+- ❌ Microservices
+- ❌ Kubernetes
+- ❌ Overengineering the architecture
+
+---
+
+## 🎯 The Real MVP
+
+> *You are done with Phase 1 when:*
+
+1. You click a button in a browser
+2. The Terraria server starts
+3. Logs appear in the UI
+4. You can stop it
+5. It doesn't crash or leak processes
+
+**That's it.**
+
+If you reach that, you already have something **stronger than most beginner backend projects**.
+
+---
+
+## 🧠 Tech Stack (Planned)
+
+| Layer       | Technology                             |
+|-------------|----------------------------------------|
+| Backend     | Java 17+ / Spring Boot 3              |
+| Frontend    | HTML + JS (Phase 2), later WebSocket  |
+| Build Tool  | Maven or Gradle                        |
+| Database    | PostgreSQL (Phase 6)                   |
+| Auth        | Spring Security + JWT (Phase 7)        |
+
+---
+
+## 🏁 Getting Started
+
+*(To be filled in as development begins.)*
+
+- Prerequisites
+- How to run the application
+- How to configure a Terraria server path
+- API documentation

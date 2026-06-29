@@ -1,0 +1,8 @@
+POST http://localhost:8080/server/start
+
+##########
+POST http://localhost:8080/server/stop
+##########
+GET http://localhost:8080/server/isAlive
+##########
+GET http://localhost:8080/server/logs
