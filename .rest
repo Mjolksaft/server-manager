@@ -1,8 +1,44 @@
-POST http://localhost:8080/server/start
+POST http://localhost:8080/server/start/0
 
+############
+GET http://localhost:8080/server/1
+##################
+
+POST http://localhost:8080/server/stop/0
 ##########
-POST http://localhost:8080/server/stop
-##########
-GET http://localhost:8080/server/isAlive
-##########
-GET http://localhost:8080/server/logs
+GET http://localhost:8080/server/isAlive/0
+#######################
+
+POST http://localhost:8080/server/create
+Content-Type: application/json
+
+{
+    "port": "7777",
+    "worldName": "Testing_server"
+}
+
+############################
+POST http://localhost:8080/server/0/kick/ 
+Content-Type: application/json
+
+{
+    "name": "asd"
+}
+
+############################
+POST http://localhost:8080/server/0/ban/ 
+Content-Type: application/json
+
+{
+    "name": "asd"
+}
+
+############################
+POST http://localhost:8080/server/0/unban/ 
+Content-Type: application/json
+
+{
+    "name": "asd"
+}
+############################
+GET http://localhost:8080/server/0/ban/ 

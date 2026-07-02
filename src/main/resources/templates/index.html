@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        .logContainer {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #000000
+        }
+    </style>
+</head>
+
+<body>
+
+    <p id="serverStatus">
+        <span th:switch="${serverState}">
+            <span th:case="'STOPPED'">Stopped</span>
+            <span th:case="'STARTING'">Starting...</span>
+            <span th:case="'RUNNING'">Running</span>
+            <span th:case="'CRASHED'">Crashed</span>
+        </span>
+    </p>
+
+    <button id="startServer">Start Server</button>
+
+    <button id="stopServer">Stop Server</button>
+
+    <div class="logContainer" id="logs">
+    </div>
+</body>
+<script src="/app.js"></script>
+
+</html>
