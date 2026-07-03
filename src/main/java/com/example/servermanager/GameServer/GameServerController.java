@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.servermanager.dto.KickRequest;
 import com.example.servermanager.dto.KickResponse;
+import com.example.servermanager.dto.ModInstallRequest;
 import com.example.servermanager.dto.SayRequest;
 import com.example.servermanager.dto.SeedResponse;
 import com.example.servermanager.dto.ServerRequest;
@@ -135,5 +136,17 @@ public class GameServerController {
     public ResponseEntity<SeedResponse> getSeed(@PathVariable Long id) {
         String seed = service.querySeed(id);
         return ResponseEntity.ok(new SeedResponse(seed));
+    }
+
+    @PostMapping("/{id}/mod/install")
+    public ResponseEntity<Void> installMod(@PathVariable Long id, @RequestBody ModInstallRequest request) {
+        service.installMod(id, request.name());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/mod/reload")
+    public ResponseEntity<Void> reloadMods(@PathVariable Long id) {
+        service.reloadMods(id);
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,7 +1,7 @@
 POST http://localhost:8080/server/start/0
 
 ############
-GET http://localhost:8080/server/1
+GET http://localhost:8080/server/
 ##################
 
 POST http://localhost:8080/server/stop/0
@@ -14,7 +14,17 @@ Content-Type: application/json
 
 {
     "port": "7777",
-    "worldName": "Testing_server"
+    "worldName": "test",
+    "type": "TERRARIA"
+}
+###################################
+POST http://localhost:8080/server/create
+Content-Type: application/json
+
+{
+    "port": "7777",
+    "worldName": "test",
+    "type": "TMODLOADER"
 }
 
 ############################

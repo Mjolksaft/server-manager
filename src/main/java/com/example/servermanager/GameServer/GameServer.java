@@ -32,23 +32,23 @@ import com.pty4j.PtyProcessBuilder;
 
 import tools.jackson.databind.ObjectMapper;
 
-public class GameServerInstance {
-    private long id;
-    private int port;
-    private String worldName;
-    private String serverPath;
-    private String worldPath;
-    private ServerStates state = ServerStates.OFFLINE;
+public abstract class GameServer {
+    protected long id;
+    protected int port;
+    protected String worldName;
+    protected String serverPath;
+    protected String worldPath;
+    protected ServerStates state = ServerStates.OFFLINE;
 
-    private PtyProcess process;
-    private LogWebSocketHandler logHandler;
-    private ObjectMapper mapper = new ObjectMapper();
+    protected PtyProcess process;
+    protected LogWebSocketHandler logHandler;
+    protected ObjectMapper mapper = new ObjectMapper();
 
-    private final List<String> connectedPlayers = Collections.synchronizedList(new ArrayList<>());
-    private volatile CompletableFuture<String> pendingTimeQuery;
-    private volatile CompletableFuture<String> pendingSeedQuery;
+    protected final List<String> connectedPlayers = Collections.synchronizedList(new ArrayList<>());
+    protected volatile CompletableFuture<String> pendingTimeQuery;
+    protected volatile CompletableFuture<String> pendingSeedQuery;
 
-    public GameServerInstance(Long id, int port, String worldName, String worldPath, String serverPath,
+    public GameServer(long id, int port, String worldName, String worldPath, String serverPath,
             LogWebSocketHandler logHandler) {
         this.id = id;
         this.port = port;
@@ -58,19 +58,29 @@ public class GameServerInstance {
         this.serverPath = serverPath;
     }
 
+    public abstract String getExecutableName();
+
+    public abstract String getWorkingDirectory();
+
+    protected String[] buildCommand() {
+        return new String[] {
+                serverPath + getExecutableName(),
+                "-world", worldPath,
+                "-port", String.valueOf(port)
+        };
+    }
+
     public void start() {
         try {
             broadcastState(new StateEvent(id, ServerStates.STARTING, "Server is Starting!"), ServerStates.STARTING);
 
-            String[] command = {
-                    serverPath + "TerrariaServer.exe",
-                    "-world", worldPath,
-                    "-port", String.valueOf(port)
-            };
+            String[] command = buildCommand();
 
             process = new PtyProcessBuilder(command)
-                    .setDirectory("D:/steam/steamapps/common/Terraria")
+                    .setDirectory(getWorkingDirectory())
                     .start();
+
+            onProcessStarted();
 
             connectedPlayers.clear();
 
@@ -79,10 +89,10 @@ public class GameServerInstance {
                         new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        System.out.println("[Terraria]: " + line);
+                        System.out.println("[" + getExecutableName() + "]: " + line);
                         broadcast(new LogEvent(id, line));
 
-                        if (line.contains("Server started")) {
+                        if (line.contains(getStartupDetectionString())) {
                             broadcastState(new StateEvent(id, ServerStates.RUNNING, "Server has started!"),
                                     ServerStates.RUNNING);
                         }
@@ -99,6 +109,13 @@ public class GameServerInstance {
             System.err.println(err);
             broadcastState(new ErrorEvent(id, err.getCause().toString(), err.getMessage()), ServerStates.CRASHED);
         }
+    }
+
+    protected void onProcessStarted() {
+    }
+
+    protected String getStartupDetectionString() {
+        return "Server started";
     }
 
     public void stop() {
@@ -121,22 +138,37 @@ public class GameServerInstance {
         }
     }
 
-    public void broadcast(ServerEvent event) {
+    public void save() {
         try {
-            String message = mapper.writeValueAsString(event);
-            logHandler.broadcast(message);
+            ensureProcessRunning();
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write("save");
+            writer.newLine();
+            writer.flush();
+
         } catch (Exception err) {
-            System.err.println("Failed to broadcast event: " + err.getMessage());
+            System.err.println(err);
+            broadcast(new ErrorEvent(id, "Save failed", err.getMessage()));
+            throw new RuntimeException("Failed to save world: " + err.getMessage(), err);
         }
     }
 
-    public void broadcastState(ServerEvent event, ServerStates newState) {
-        state = newState;
+    public void say(SayRequest request) {
         try {
-            String message = mapper.writeValueAsString(event);
-            logHandler.broadcast(message);
+            ensureProcessRunning();
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write(String.format("say %s", request.message()));
+            writer.newLine();
+            writer.flush();
+
+            broadcast(new GameActionEvent(id, GameAction.SAY, request.message(), null));
+
         } catch (Exception err) {
-            System.err.println("Failed to broadcast state event: " + err.getMessage());
+            System.err.println(err);
+            broadcast(new ErrorEvent(id, "Say failed", err.getMessage()));
+            throw new RuntimeException("Failed to send message: " + err.getMessage(), err);
         }
     }
 
@@ -218,7 +250,7 @@ public class GameServerInstance {
 
             for (int i = 0; i < lines.size(); i++) {
                 if (lines.get(i).equals("//" + request.name())) {
-                    i++; // skip the IP line too
+                    i++;
                     found = true;
                 } else {
                     updated.add(lines.get(i));
@@ -238,6 +270,22 @@ public class GameServerInstance {
             System.err.println(err);
             broadcast(new ErrorEvent(id, "Unban failed", err.getMessage()));
             throw new RuntimeException("Failed to unban player '" + request.name() + "': " + err.getMessage(), err);
+        }
+    }
+
+    public void settle() {
+        try {
+            ensureProcessRunning();
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write("settle");
+            writer.newLine();
+            writer.flush();
+
+        } catch (Exception err) {
+            System.err.println(err);
+            broadcast(new ErrorEvent(id, "Settle failed", err.getMessage()));
+            throw new RuntimeException("Failed to settle water: " + err.getMessage(), err);
         }
     }
 
@@ -291,128 +339,6 @@ public class GameServerInstance {
         }
     }
 
-    public List<PlayerResponse> getPlayers() {
-        synchronized (connectedPlayers) {
-            return connectedPlayers.stream().map(PlayerResponse::new).toList();
-        }
-    }
-
-    private void trackPlayer(String line) {
-        if (line.contains("has joined")) {
-            int idx = line.indexOf(" has joined");
-            String name = line.substring(0, idx).trim();
-            connectedPlayers.add(name);
-            System.out.println("[Player Tracker] " + name + " joined");
-
-        } else if (line.contains("has left")) {
-            int idx = line.indexOf(" has left");
-            String name = line.substring(0, idx).trim();
-            connectedPlayers.remove(name);
-            System.out.println("[Player Tracker] " + name + " left");
-
-        } else if (line.contains("was booted")) {
-            int idx = line.indexOf(" was booted");
-            String target = line.substring(0, idx).trim();
-            connectedPlayers.remove(target);
-            System.out.println("[Player Tracker] " + target + " was booted");
-        }
-    }
-
-    private void ensureProcessRunning() {
-        if (process == null) {
-            throw new IllegalStateException("Server process is not running. Start the server first.");
-        }
-    }
-
-    public ServerStates getState() {
-        return state;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public String getWorldPath() {
-        return worldPath;
-    }
-
-    public String getServerPath() {
-        return serverPath;
-    }
-
-    public String getWorldName() {
-        return worldName;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setPort(int newPort) {
-        this.port = newPort;
-    }
-
-    public void setWorldPath(String newWorldPath) {
-        this.worldPath = newWorldPath;
-    }
-
-    public void setServerPath(String newServerPath) {
-        this.serverPath = newServerPath;
-    }
-    public void setWorldName(String newWorldName) {
-        this.worldName = newWorldName;
-    }
-
-    public void save() {
-        try {
-            ensureProcessRunning();
-            OutputStream stream = process.getOutputStream();
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
-            writer.write("save");
-            writer.newLine();
-            writer.flush();
-
-        } catch (Exception err) {
-            System.err.println(err);
-            broadcast(new ErrorEvent(id, "Save failed", err.getMessage()));
-            throw new RuntimeException("Failed to save world: " + err.getMessage(), err);
-        }
-    }
-
-    public void say(SayRequest request) {
-        try {
-            ensureProcessRunning();
-            OutputStream stream = process.getOutputStream();
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
-            writer.write(String.format("say %s", request.message()));
-            writer.newLine();
-            writer.flush();
-
-            broadcast(new GameActionEvent(id, GameAction.SAY, request.message(), null));
-
-        } catch (Exception err) {
-            System.err.println(err);
-            broadcast(new ErrorEvent(id, "Say failed", err.getMessage()));
-            throw new RuntimeException("Failed to send message: " + err.getMessage(), err);
-        }
-    }
-
-    public void settle() {
-        try {
-            ensureProcessRunning();
-            OutputStream stream = process.getOutputStream();
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
-            writer.write("settle");
-            writer.newLine();
-            writer.flush();
-
-        } catch (Exception err) {
-            System.err.println(err);
-            broadcast(new ErrorEvent(id, "Settle failed", err.getMessage()));
-            throw new RuntimeException("Failed to settle water: " + err.getMessage(), err);
-        }
-    }
-
     public String queryTime() {
         ensureProcessRunning();
         CompletableFuture<String> future = new CompletableFuture<>();
@@ -461,6 +387,92 @@ public class GameServerInstance {
         }
     }
 
+    public List<PlayerResponse> getPlayers() {
+        synchronized (connectedPlayers) {
+            return connectedPlayers.stream().map(PlayerResponse::new).toList();
+        }
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public String getWorldName() {
+        return worldName;
+    }
+
+    public String getServerPath() {
+        return serverPath;
+    }
+
+    public String getWorldPath() {
+        return worldPath;
+    }
+
+    public ServerStates getState() {
+        return state;
+    }
+
+    public void setPort(int newPort) {
+        this.port = newPort;
+    }
+
+    public void setWorldPath(String newWorldPath) {
+        this.worldPath = newWorldPath;
+    }
+
+    public void setServerPath(String newServerPath) {
+        this.serverPath = newServerPath;
+    }
+
+    public void setWorldName(String newWorldName) {
+        this.worldName = newWorldName;
+    }
+
+    public void broadcast(ServerEvent event) {
+        try {
+            String message = mapper.writeValueAsString(event);
+            logHandler.broadcast(message);
+        } catch (Exception err) {
+            System.err.println("Failed to broadcast event: " + err.getMessage());
+        }
+    }
+
+    public void broadcastState(ServerEvent event, ServerStates newState) {
+        state = newState;
+        try {
+            String message = mapper.writeValueAsString(event);
+            logHandler.broadcast(message);
+        } catch (Exception err) {
+            System.err.println("Failed to broadcast state event: " + err.getMessage());
+        }
+    }
+
+    private void trackPlayer(String line) {
+        if (line.contains("has joined")) {
+            int idx = line.indexOf(" has joined");
+            String name = line.substring(0, idx).trim();
+            connectedPlayers.add(name);
+            System.out.println("[Player Tracker] " + name + " joined");
+
+        } else if (line.contains("has left")) {
+            int idx = line.indexOf(" has left");
+            String name = line.substring(0, idx).trim();
+            connectedPlayers.remove(name);
+            System.out.println("[Player Tracker] " + name + " left");
+
+        } else if (line.contains("was booted")) {
+            int idx = line.indexOf(" was booted");
+            String target = line.substring(0, idx).trim();
+            connectedPlayers.remove(target);
+            System.out.println("[Player Tracker] " + target + " was booted");
+        }
+    }
+
     private void checkQueryResponse(String line) {
         CompletableFuture<String> timeFuture = pendingTimeQuery;
         if (timeFuture != null && !timeFuture.isDone()) {
@@ -478,6 +490,12 @@ public class GameServerInstance {
                 pendingSeedQuery = null;
                 seedFuture.complete(line.substring(idx + prefix.length()).trim());
             }
+        }
+    }
+
+    protected void ensureProcessRunning() {
+        if (process == null) {
+            throw new IllegalStateException("Server process is not running. Start the server first.");
         }
     }
 }

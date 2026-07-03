@@ -1,5 +1,5 @@
 package com.example.servermanager.dto;
 
 public enum GameAction {
-    KICK, BAN, UNBAN, SAVE, SAY, PASSWORD_CHANGE, TIME_CHANGE
+    KICK, BAN, UNBAN, SAVE, SAY, PASSWORD_CHANGE, TIME_CHANGE, MOD_INSTALL, MOD_RELOAD
 }
