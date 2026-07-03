@@ -30,7 +30,8 @@ POST http://localhost:8080/server/0/ban/
 Content-Type: application/json
 
 {
-    "name": "asd"
+    "name": "asd",
+    "Reason": "Being cringe :/"
 }
 
 ############################
@@ -42,3 +43,34 @@ Content-Type: application/json
 }
 ############################
 GET http://localhost:8080/server/0/ban/ 
+
+
+############################
+POST http://localhost:8080/server/0/save/ 
+
+##########################
+POST http://localhost:8080/server/0/say/ 
+Content-Type: application/json
+
+{
+    "message": "asdasdasd"
+}
+
+##########################
+POST http://localhost:8080/server/0/time/ 
+Content-Type: application/json
+
+{
+    "time": "noon"
+}
+
+##########################
+GET http://localhost:8080/server/0/players/ 
+
+##########################
+POST http://localhost:8080/server/0/password/ 
+Content-Type: application/json
+
+{
+    "password": " "
+}
