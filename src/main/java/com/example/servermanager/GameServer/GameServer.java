@@ -8,7 +8,9 @@ import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +52,31 @@ public abstract class GameServer {
     protected volatile CompletableFuture<String> pendingSeedQuery;
     protected CompletableFuture<Void> pendingModListQuery;
     protected List<String> currentModList;
+    protected CompletableFuture<Void> pendingPlayingQuery;
+    protected List<String> currentPlayerList;
+    protected final List<PendingConfirmation> pendingConfirmations = new ArrayList<>();
+
+    private static class PendingConfirmation {
+        final List<String> keywords;
+        final CompletableFuture<String> future;
+
+        PendingConfirmation(List<String> keywords, CompletableFuture<String> future) {
+            this.keywords = keywords;
+            this.future = future;
+        }
+    }
+
+    private String stripAnsi(String line) {
+        return line.replaceAll("\u001B\\[[0-9;?]*[a-zA-Z]", "").strip();
+    }
+
+    protected CompletableFuture<String> expectConfirmation(String... keywords) {
+        CompletableFuture<String> future = new CompletableFuture<>();
+        synchronized (pendingConfirmations) {
+            pendingConfirmations.add(new PendingConfirmation(Arrays.asList(keywords), future));
+        }
+        return future;
+    }
 
     public GameServer(long id, int port, String worldName, String worldPath, String serverPath,
             LogWebSocketHandler logHandler) {
@@ -141,7 +168,7 @@ public abstract class GameServer {
         }
     }
 
-    public void save() {
+    public String save() {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
@@ -149,6 +176,13 @@ public abstract class GameServer {
             writer.write("save");
             writer.newLine();
             writer.flush();
+
+            CompletableFuture<String> cf = expectConfirmation("saved");
+            try {
+                return cf.get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                return "save command sent";
+            }
 
         } catch (Exception err) {
             System.err.println(err);
@@ -184,8 +218,15 @@ public abstract class GameServer {
             writer.newLine();
             writer.flush();
 
-            broadcast(new GameActionEvent(id, GameAction.KICK, request.name(), request.details()));
-            return new KickResponse(request.name(), request.details() != null ? request.details() : "Kicked");
+            CompletableFuture<String> cf = expectConfirmation(" kicked ");
+            try {
+                String result = cf.get(3, TimeUnit.SECONDS);
+                broadcast(new GameActionEvent(id, GameAction.KICK, request.name(), result));
+                return new KickResponse(request.name(), result);
+            } catch (Exception e) {
+                broadcast(new GameActionEvent(id, GameAction.KICK, request.name(), request.details()));
+                return new KickResponse(request.name(), request.details() != null ? request.details() : "Kicked");
+            }
 
         } catch (Exception err) {
             System.err.println(err);
@@ -203,8 +244,15 @@ public abstract class GameServer {
             writer.newLine();
             writer.flush();
 
-            broadcast(new GameActionEvent(id, GameAction.BAN, request.name(), request.details()));
-            return new KickResponse(request.name(), request.details() != null ? request.details() : "Banned");
+            CompletableFuture<String> cf = expectConfirmation(" banned ");
+            try {
+                String result = cf.get(3, TimeUnit.SECONDS);
+                broadcast(new GameActionEvent(id, GameAction.BAN, request.name(), result));
+                return new KickResponse(request.name(), result);
+            } catch (Exception e) {
+                broadcast(new GameActionEvent(id, GameAction.BAN, request.name(), request.details()));
+                return new KickResponse(request.name(), request.details() != null ? request.details() : "Banned");
+            }
 
         } catch (Exception err) {
             System.err.println(err);
@@ -276,7 +324,7 @@ public abstract class GameServer {
         }
     }
 
-    public void settle() {
+    public String settle() {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
@@ -284,6 +332,13 @@ public abstract class GameServer {
             writer.write("settle");
             writer.newLine();
             writer.flush();
+
+            CompletableFuture<String> cf = expectConfirmation("Settled");
+            try {
+                return cf.get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                return "settle command sent";
+            }
 
         } catch (Exception err) {
             System.err.println(err);
@@ -392,9 +447,58 @@ public abstract class GameServer {
         }
     }
 
+    public List<PlayerResponse> queryPlayers() {
+        ensureProcessRunning();
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        pendingPlayingQuery = future;
+        currentPlayerList = Collections.synchronizedList(new ArrayList<>());
+
+        try {
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write("playing");
+            writer.newLine();
+            writer.flush();
+        } catch (Exception err) {
+            pendingPlayingQuery = null;
+            throw new RuntimeException("Failed to send playing command", err);
+        }
+
+        try {
+            future.get(1, TimeUnit.SECONDS);
+        } catch (Exception e) {
+        }
+
+        pendingPlayingQuery = null;
+
+        List<String> rawLines;
+        synchronized (currentPlayerList) {
+            rawLines = new ArrayList<>(currentPlayerList);
+        }
+
+        return rawLines.stream()
+                .map(this::stripAnsi)
+                .filter(s -> !s.isEmpty())
+                .filter(s -> !s.contains("playing"))
+                .filter(s -> !s.strip().equals(":"))
+                .filter(s -> !s.matches("\\d+ players? connected\\.?"))
+                .map(s -> s.replaceFirst("^:\\s*", "").strip())
+                .map(s -> {
+                    int ipStart = s.lastIndexOf('(');
+                    int ipEnd = s.lastIndexOf(')');
+                    if (ipStart >= 0 && ipEnd > ipStart) {
+                        String name = s.substring(0, ipStart).strip();
+                        String ip = s.substring(ipStart + 1, ipEnd).strip();
+                        return new PlayerResponse(name, ip);
+                    }
+                    return new PlayerResponse(s, null);
+                })
+                .toList();
+    }
+
     public List<PlayerResponse> getPlayers() {
         synchronized (connectedPlayers) {
-            return connectedPlayers.stream().map(PlayerResponse::new).toList();
+            return connectedPlayers.stream().map(name -> new PlayerResponse(name, null)).toList();
         }
     }
 
@@ -458,52 +562,84 @@ public abstract class GameServer {
     }
 
     private void trackPlayer(String line) {
-        if (line.contains("has joined")) {
-            int idx = line.indexOf(" has joined");
-            String name = line.substring(0, idx).trim();
+        String cleaned = stripAnsi(line);
+        if (cleaned.contains("has joined")) {
+            int idx = cleaned.indexOf(" has joined");
+            String name = cleaned.substring(0, idx).trim();
             connectedPlayers.add(name);
             System.out.println("[Player Tracker] " + name + " joined");
 
-        } else if (line.contains("has left")) {
-            int idx = line.indexOf(" has left");
-            String name = line.substring(0, idx).trim();
+        } else if (cleaned.contains("has left")) {
+            int idx = cleaned.indexOf(" has left");
+            String name = cleaned.substring(0, idx).trim();
             connectedPlayers.remove(name);
             System.out.println("[Player Tracker] " + name + " left");
 
-        } else if (line.contains("was booted")) {
-            int idx = line.indexOf(" was booted");
-            String target = line.substring(0, idx).trim();
+        } else if (cleaned.contains("was booted")) {
+            int idx = cleaned.indexOf(" was booted");
+            String target = cleaned.substring(0, idx).trim();
             connectedPlayers.remove(target);
             System.out.println("[Player Tracker] " + target + " was booted");
         }
     }
 
     private void checkQueryResponse(String line) {
+        String cleaned = stripAnsi(line);
+
         CompletableFuture<String> timeFuture = pendingTimeQuery;
         if (timeFuture != null && !timeFuture.isDone()) {
-            if (line.startsWith("Time:")) {
+            if (cleaned.startsWith("Time:")) {
                 pendingTimeQuery = null;
-                timeFuture.complete(line.substring("Time:".length()).trim());
+                timeFuture.complete(cleaned.substring("Time:".length()).trim());
+                return;
             }
         }
 
         CompletableFuture<String> seedFuture = pendingSeedQuery;
         if (seedFuture != null && !seedFuture.isDone()) {
             String prefix = "World seed is:";
-            int idx = line.indexOf(prefix);
+            int idx = cleaned.indexOf(prefix);
             if (idx >= 0) {
                 pendingSeedQuery = null;
-                seedFuture.complete(line.substring(idx + prefix.length()).trim());
+                seedFuture.complete(cleaned.substring(idx + prefix.length()).trim());
+                return;
             }
         }
 
         if (pendingModListQuery != null && !pendingModListQuery.isDone()) {
-            String cleaned = line.replaceAll("\u001B\\[[0-9;?]*[a-zA-Z]", "").strip();
             if (cleaned.equals(":")) {
                 pendingModListQuery.complete(null);
                 return;
             }
             currentModList.add(line);
+            return;
+        }
+
+        if (pendingPlayingQuery != null && !pendingPlayingQuery.isDone()) {
+            if (cleaned.equals(":")) {
+                pendingPlayingQuery.complete(null);
+                return;
+            }
+            currentPlayerList.add(line);
+            return;
+        }
+
+        synchronized (pendingConfirmations) {
+            Iterator<PendingConfirmation> it = pendingConfirmations.iterator();
+            while (it.hasNext()) {
+                PendingConfirmation pc = it.next();
+                if (pc.future.isDone()) {
+                    it.remove();
+                } else {
+                    for (String kw : pc.keywords) {
+                        if (cleaned.contains(kw)) {
+                            pc.future.complete(cleaned);
+                            it.remove();
+                            return;
+                        }
+                    }
+                }
+            }
         }
     }
 

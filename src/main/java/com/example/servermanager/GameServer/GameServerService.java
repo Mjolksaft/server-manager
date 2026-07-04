@@ -117,54 +117,75 @@ public class GameServerService {
         return server.unban(request);
     }
 
-    public void tpToSpawn(long id, String playerName) {
+    public String tpToSpawn(long id, String playerName) {
         GameServer server = findServerOrThrow(id);
         if (server instanceof TModLoaderServer tmod) {
-            tmod.tpToSpawn(playerName);
+            return tmod.tpToSpawn(playerName);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Server " + id + " is not a TModLoader server");
         }
     }
 
-    public void giveItem(long id, String playerName, String itemName) {
+    public String giveItem(long id, String playerName, String itemName) {
         GameServer server = findServerOrThrow(id);
         if (server instanceof TModLoaderServer tmod) {
-            tmod.giveItem(playerName, itemName);
+            return tmod.giveItem(playerName, itemName);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Server " + id + " is not a TModLoader server");
         }
     }
 
-    public void tpToPlayer(long id, String name, String target) {
+    public String tpToPlayer(long id, String name, String target) {
         GameServer server = findServerOrThrow(id);
         if (server instanceof TModLoaderServer tmod) {
-            tmod.tpToPlayer(name, target);
+            return tmod.tpToPlayer(name, target);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Server " + id + " is not a TModLoader server");
         }
     }
 
-    public void spawnMob(long id, String npcName, String playerName) {
+    public String spawnMob(long id, String npcName, String playerName) {
         GameServer server = findServerOrThrow(id);
         if (server instanceof TModLoaderServer tmod) {
-            tmod.spawnMob(npcName, playerName);
+            return tmod.spawnMob(npcName, playerName);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Server " + id + " is not a TModLoader server");
         }
     }
 
-    public void killEntity(long id, String name) {
+    public String killEntity(long id, String name) {
         GameServer server = findServerOrThrow(id);
         if (server instanceof TModLoaderServer tmod) {
-            tmod.killEntity(name);
+            return tmod.killEntity(name);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Server " + id + " is not a TModLoader server");
         }
+    }
+
+    public String killAll(long id) {
+        GameServer server = findServerOrThrow(id);
+        if (server instanceof TModLoaderServer tmod) {
+            return tmod.killAll();
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Server " + id + " is not a TModLoader server");
+        }
+    }
+
+    public String settle(long id) {
+        GameServer server = findServerOrThrow(id);
+        return server.settle();
+    }
+
+
+    public List<PlayerResponse> getPlayers(long id) {
+        GameServer server = findServerOrThrow(id);
+        return server.getPlayers();
     }
 
     public void say(long id, SayRequest request) {
@@ -180,16 +201,6 @@ public class GameServerService {
     public void setPassword(long id, PasswordRequest request) {
         GameServer server = findServerOrThrow(id);
         server.setPassword(request);
-    }
-
-    public List<PlayerResponse> getPlayers(long id) {
-        GameServer server = findServerOrThrow(id);
-        return server.getPlayers();
-    }
-
-    public void settle(long id) {
-        GameServer server = findServerOrThrow(id);
-        server.settle();
     }
 
     public String queryTime(long id) {

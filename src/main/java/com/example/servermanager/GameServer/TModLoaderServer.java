@@ -14,6 +14,7 @@ import com.example.servermanager.dto.ErrorEvent;
 import com.example.servermanager.dto.GameAction;
 import com.example.servermanager.dto.GameActionEvent;
 import com.example.servermanager.dto.ModResponse;
+import com.example.servermanager.dto.PlayerResponse;
 
 public class TModLoaderServer extends GameServer {
 
@@ -46,8 +47,12 @@ public class TModLoaderServer extends GameServer {
         };
     }
 
+    @Override
+    public List<PlayerResponse> getPlayers() {
+        return queryPlayers();
+    }
 
-    public void tpToSpawn(String name) {
+    public String tpToSpawn(String name) {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
@@ -56,6 +61,13 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
+            CompletableFuture<String> cf = expectConfirmation("[CMD] spawn", "[ERROR] spawn");
+            try {
+                return cf.get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                return "spawn command sent";
+            }
+
         } catch (Exception err) {
             System.err.println(err);
             broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
@@ -63,7 +75,7 @@ public class TModLoaderServer extends GameServer {
         }
     }
 
-    public void tpToPlayer(String name, String secondName) {
+    public String tpToPlayer(String name, String secondName) {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
@@ -72,6 +84,13 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
+            CompletableFuture<String> cf = expectConfirmation("[CMD] tp", "[ERROR] tp");
+            try {
+                return cf.get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                return "tp command sent";
+            }
+
         } catch (Exception err) {
             System.err.println(err);
             broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
@@ -79,7 +98,7 @@ public class TModLoaderServer extends GameServer {
         }
     }
 
-    public void spawnMob(String npcName, String playerName) {
+    public String spawnMob(String npcName, String playerName) {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
@@ -88,6 +107,13 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
+            CompletableFuture<String> cf = expectConfirmation("[CMD] spawnmob", "[ERROR] spawnmob");
+            try {
+                return cf.get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                return "spawnmob command sent";
+            }
+
         } catch (Exception err) {
             System.err.println(err);
             broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
@@ -95,7 +121,7 @@ public class TModLoaderServer extends GameServer {
         }
     }
 
-    public void killAll() {
+    public String killAll() {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
@@ -104,6 +130,13 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
+            CompletableFuture<String> cf = expectConfirmation("[CMD] kill", "[ERROR] kill");
+            try {
+                return cf.get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                return "kill all command sent";
+            }
+
         } catch (Exception err) {
             System.err.println(err);
             broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
@@ -111,7 +144,7 @@ public class TModLoaderServer extends GameServer {
         }
     }
 
-    public void killEntity(String name) {
+    public String killEntity(String name) {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
@@ -120,13 +153,21 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
+            CompletableFuture<String> cf = expectConfirmation("[CMD] kill", "[ERROR] kill");
+            try {
+                return cf.get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                return "kill command sent";
+            }
+
         } catch (Exception err) {
             System.err.println(err);
             broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
             throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
         }
     }
-    public void giveItem(String playerName, String itemName) {
+
+    public String giveItem(String playerName, String itemName) {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
@@ -135,12 +176,20 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
+            CompletableFuture<String> cf = expectConfirmation("[CMD] give", "[ERROR] give");
+            try {
+                return cf.get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                return "give command sent";
+            }
+
         } catch (Exception err) {
             System.err.println(err);
             broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
             throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
         }
     }
+
 
     public List<ModResponse> queryModList() {
         ensureProcessRunning();
@@ -186,5 +235,6 @@ public class TModLoaderServer extends GameServer {
         broadcast(new GameActionEvent(id, GameAction.MOD_LIST, null, null));
         return mods;
     }
+
 
 }

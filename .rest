@@ -108,7 +108,7 @@ POST http://localhost:8080/server/0/spawn
 Content-Type: application/json
 
 {
-    "name": "test"
+    "name": "asd"
 }
 
 ##################################
@@ -143,5 +143,5 @@ Content-Type: application/json
 
 {
     "playerName": "test",
-    "itemName": "Meowmere"
+    "itemName": "adgadg"
 }

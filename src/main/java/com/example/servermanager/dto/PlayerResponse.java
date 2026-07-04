@@ -1,5 +1,6 @@
 package com.example.servermanager.dto;
 
 public record PlayerResponse(
-    String name
+    String name,
+    String ip
 ) {}
