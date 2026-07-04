@@ -17,6 +17,7 @@ import com.example.servermanager.WebSocket.LogWebSocketHandler;
 import com.example.servermanager.dto.ErrorEvent;
 import com.example.servermanager.dto.GameAction;
 import com.example.servermanager.dto.GameActionEvent;
+import com.example.servermanager.dto.ModResponse;
 import com.example.servermanager.dto.KickRequest;
 import com.example.servermanager.dto.KickResponse;
 import com.example.servermanager.dto.LogEvent;
@@ -47,6 +48,8 @@ public abstract class GameServer {
     protected final List<String> connectedPlayers = Collections.synchronizedList(new ArrayList<>());
     protected volatile CompletableFuture<String> pendingTimeQuery;
     protected volatile CompletableFuture<String> pendingSeedQuery;
+    protected CompletableFuture<Void> pendingModListQuery;
+    protected List<String> currentModList;
 
     public GameServer(long id, int port, String worldName, String worldPath, String serverPath,
             LogWebSocketHandler logHandler) {
@@ -289,12 +292,14 @@ public abstract class GameServer {
         }
     }
 
+
+
     public void setTime(TimeRequest request) {
         try {
             String time = request.time() != null ? request.time().toLowerCase() : "";
             if (!time.matches("dawn|noon|dusk|midnight")) {
                 throw new IllegalArgumentException(
-                    "Invalid time '" + request.time() + "'. Must be one of: dawn, noon, dusk, midnight");
+                        "Invalid time '" + request.time() + "'. Must be one of: dawn, noon, dusk, midnight");
             }
 
             ensureProcessRunning();
@@ -491,6 +496,19 @@ public abstract class GameServer {
                 seedFuture.complete(line.substring(idx + prefix.length()).trim());
             }
         }
+
+        if (pendingModListQuery != null && !pendingModListQuery.isDone()) {
+            String cleaned = line.replaceAll("\u001B\\[[0-9;?]*[a-zA-Z]", "").strip();
+            if (cleaned.equals(":")) {
+                pendingModListQuery.complete(null);
+                return;
+            }
+            currentModList.add(line);
+        }
+    }
+
+    public List<ModResponse> getMods() {
+        throw new UnsupportedOperationException("Mod list is only supported on tModLoader servers");
     }
 
     protected void ensureProcessRunning() {

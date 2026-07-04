@@ -1,14 +1,4 @@
-POST http://localhost:8080/server/start/0
-
-############
-GET http://localhost:8080/server/
-##################
-
-POST http://localhost:8080/server/stop/0
-##########
-GET http://localhost:8080/server/isAlive/0
-#######################
-
+################################
 POST http://localhost:8080/server/create
 Content-Type: application/json
 
@@ -17,7 +7,8 @@ Content-Type: application/json
     "worldName": "test",
     "type": "TERRARIA"
 }
-###################################
+
+##################################
 POST http://localhost:8080/server/create
 Content-Type: application/json
 
@@ -27,60 +18,130 @@ Content-Type: application/json
     "type": "TMODLOADER"
 }
 
-############################
-POST http://localhost:8080/server/0/kick/ 
+#################################
+GET http://localhost:8080/server/
+
+################################
+GET http://localhost:8080/server/0
+
+###################################
+POST http://localhost:8080/server/start/0
+
+################################
+POST http://localhost:8080/server/stop/0
+
+###################################
+GET http://localhost:8080/server/isAlive/0
+
+#################################
+POST http://localhost:8080/server/0/save
+
+###################################
+POST http://localhost:8080/server/0/say
 Content-Type: application/json
 
 {
-    "name": "asd"
+    "message": "Hello world"
 }
 
-############################
-POST http://localhost:8080/server/0/ban/ 
-Content-Type: application/json
-
-{
-    "name": "asd",
-    "Reason": "Being cringe :/"
-}
-
-############################
-POST http://localhost:8080/server/0/unban/ 
-Content-Type: application/json
-
-{
-    "name": "asd"
-}
-############################
-GET http://localhost:8080/server/0/ban/ 
-
-
-############################
-POST http://localhost:8080/server/0/save/ 
-
-##########################
-POST http://localhost:8080/server/0/say/ 
-Content-Type: application/json
-
-{
-    "message": "asdasdasd"
-}
-
-##########################
-POST http://localhost:8080/server/0/time/ 
+################################
+POST http://localhost:8080/server/0/time
 Content-Type: application/json
 
 {
     "time": "noon"
 }
 
-##########################
-GET http://localhost:8080/server/0/players/ 
+################################
+GET http://localhost:8080/server/0/time
 
-##########################
-POST http://localhost:8080/server/0/password/ 
+################################
+GET http://localhost:8080/server/0/seed
+
+################################
+POST http://localhost:8080/server/0/password
 Content-Type: application/json
 
 {
-    "password": " "
+    "password": "mypass"
+}
+
+################################
+POST http://localhost:8080/server/0/kick
+Content-Type: application/json
+
+{
+    "name": "test"
+}
+
+################################
+POST http://localhost:8080/server/0/ban
+Content-Type: application/json
+
+{
+    "name": "test",
+    "details": "Being cringe"
+}
+
+##############################
+POST http://localhost:8080/server/0/unban
+Content-Type: application/json
+
+{
+    "name": "test"
+}
+
+################################
+GET http://localhost:8080/server/0/ban
+
+###################################
+GET http://localhost:8080/server/0/players
+
+################################
+POST http://localhost:8080/server/0/settle
+
+################################
+POST http://localhost:8080/server/0/mods
+
+################
+POST http://localhost:8080/server/0/spawn
+Content-Type: application/json
+
+{
+    "name": "test"
+}
+
+##################################
+POST http://localhost:8080/server/0/tp
+Content-Type: application/json
+
+{
+    "name": "test",
+    "target": "test"
+}
+
+###########
+POST http://localhost:8080/server/0/spawnmob
+Content-Type: application/json
+
+{
+    "npcName": "zombie",
+    "playerName": "test"
+}
+
+### ##############
+POST http://localhost:8080/server/0/kill
+Content-Type: application/json
+
+{
+    "name": "guide"
+}
+
+#################
+POST http://localhost:8080/server/0/give
+Content-Type: application/json
+
+{
+    "playerName": "test",
+    "itemName": "Meowmere"
 }

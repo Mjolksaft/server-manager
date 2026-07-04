@@ -11,14 +11,21 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.servermanager.dto.ActionResponse;
+import com.example.servermanager.dto.GiveItemRequest;
 import com.example.servermanager.dto.KickRequest;
 import com.example.servermanager.dto.KickResponse;
+import com.example.servermanager.dto.KillEntityRequest;
 import com.example.servermanager.dto.ModInstallRequest;
+import com.example.servermanager.dto.ModResponse;
 import com.example.servermanager.dto.SayRequest;
 import com.example.servermanager.dto.SeedResponse;
 import com.example.servermanager.dto.ServerRequest;
 import com.example.servermanager.dto.ServerResponse;
 import com.example.servermanager.dto.ServerStates;
+import com.example.servermanager.dto.SpawnMobRequest;
+import com.example.servermanager.dto.SpawnRequest;
+import com.example.servermanager.dto.TpRequest;
 import com.example.servermanager.dto.TimeResponse;
 import com.example.servermanager.dto.PasswordRequest;
 import com.example.servermanager.dto.PlayerResponse;
@@ -66,87 +73,112 @@ public class GameServerController {
         return ResponseEntity.ok(service.getState(id));
     }
 
-    @PostMapping("/{id}/kick/")
+    @PostMapping("/{id}/kick")
     public ResponseEntity<KickResponse> kickPlayer(@PathVariable Long id, @RequestBody KickRequest request) {
         KickResponse response = service.kick(id, request);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{id}/ban/")
+    @PostMapping("/{id}/ban")
     public ResponseEntity<KickResponse> banPlayer(@PathVariable Long id, @RequestBody KickRequest request) {
         KickResponse response = service.ban(id, request);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{id}/unban/")
+    @PostMapping("/{id}/unban")
     public ResponseEntity<KickResponse> unbanPlayer(@PathVariable Long id, @RequestBody KickRequest request) {
         KickResponse response = service.unban(id, request);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/ban/")
+    @GetMapping("/{id}/ban")
     public ResponseEntity<List<KickResponse>> getBans(@PathVariable Long id) {
         List<KickResponse> response = service.bans(id);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{id}/save/")
+    @PostMapping("/{id}/save")
     public ResponseEntity<ServerResponse> save(@PathVariable Long id) {
         ServerResponse response = service.save(id);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{id}/say/")
-    public ResponseEntity<Void> say(@PathVariable Long id, @RequestBody SayRequest request) {
+    @PostMapping("/{id}/say")
+    public ResponseEntity<ActionResponse> say(@PathVariable Long id, @RequestBody SayRequest request) {
         service.say(id, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(new ActionResponse("say", null, request.message()));
     }
 
-    @PostMapping("/{id}/time/")
-    public ResponseEntity<Void> setTime(@PathVariable Long id, @RequestBody TimeRequest request) {
+    @PostMapping("/{id}/time")
+    public ResponseEntity<ActionResponse> setTime(@PathVariable Long id, @RequestBody TimeRequest request) {
         service.setTime(id, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(new ActionResponse("time", null, request.time()));
     }
 
-    @PostMapping("/{id}/password/")
-    public ResponseEntity<Void> setPassword(@PathVariable Long id, @RequestBody PasswordRequest request) {
+    @PostMapping("/{id}/password")
+    public ResponseEntity<ActionResponse> setPassword(@PathVariable Long id, @RequestBody PasswordRequest request) {
         service.setPassword(id, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(new ActionResponse("password", null, null));
     }
 
-    @GetMapping("/{id}/players/")
+    @PostMapping("/{id}/mods")
+    public ResponseEntity<List<ModResponse>> getMods(@PathVariable Long id) {
+        List<ModResponse> modList = service.getMods(id);
+        return ResponseEntity.ok(modList);
+    }
+
+
+    @GetMapping("/{id}/players")
     public ResponseEntity<List<PlayerResponse>> getPlayers(@PathVariable Long id) {
         List<PlayerResponse> players = service.getPlayers(id);
         return ResponseEntity.ok(players);
     }
 
-    @PostMapping("/{id}/settle/")
-    public ResponseEntity<Void> settle(@PathVariable Long id) {
+    @PostMapping("/{id}/settle")
+    public ResponseEntity<ActionResponse> settle(@PathVariable Long id) {
         service.settle(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(new ActionResponse("settle", null, null));
     }
 
-    @GetMapping("/{id}/time/")
+    @GetMapping("/{id}/time")
     public ResponseEntity<TimeResponse> getTime(@PathVariable Long id) {
         String time = service.queryTime(id);
         return ResponseEntity.ok(new TimeResponse(time));
     }
 
-    @GetMapping("/{id}/seed/")
+    @GetMapping("/{id}/seed")
     public ResponseEntity<SeedResponse> getSeed(@PathVariable Long id) {
         String seed = service.querySeed(id);
         return ResponseEntity.ok(new SeedResponse(seed));
     }
 
-    @PostMapping("/{id}/mod/install")
-    public ResponseEntity<Void> installMod(@PathVariable Long id, @RequestBody ModInstallRequest request) {
-        service.installMod(id, request.name());
-        return ResponseEntity.ok().build();
+    @PostMapping("/{id}/spawn")
+    public ResponseEntity<ActionResponse> tpToSpawn(@PathVariable Long id, @RequestBody SpawnRequest request) {
+        service.tpToSpawn(id, request.name());
+        return ResponseEntity.ok(new ActionResponse("spawn", request.name(), "Teleported to spawn"));
     }
 
-    @PostMapping("/{id}/mod/reload")
-    public ResponseEntity<Void> reloadMods(@PathVariable Long id) {
-        service.reloadMods(id);
-        return ResponseEntity.ok().build();
+    @PostMapping("/{id}/tp")
+    public ResponseEntity<ActionResponse> tpToPlayer(@PathVariable Long id, @RequestBody TpRequest request) {
+        service.tpToPlayer(id, request.name(), request.target());
+        return ResponseEntity.ok(new ActionResponse("tp", request.name(), "Teleported to " + request.target()));
+    }
+
+    @PostMapping("/{id}/spawnmob")
+    public ResponseEntity<ActionResponse> spawnMob(@PathVariable Long id, @RequestBody SpawnMobRequest request) {
+        service.spawnMob(id, request.npcName(), request.playerName());
+        return ResponseEntity.ok(new ActionResponse("spawnmob", request.npcName(), "Spawned at " + request.playerName()));
+    }
+
+    @PostMapping("/{id}/kill")
+    public ResponseEntity<ActionResponse> kill(@PathVariable Long id, @RequestBody KillEntityRequest request) {
+        service.killEntity(id, request.name());
+        return ResponseEntity.ok(new ActionResponse("kill", request.name(), null));
+    }
+
+    @PostMapping("/{id}/give")
+    public ResponseEntity<ActionResponse> giveItem(@PathVariable Long id, @RequestBody GiveItemRequest request) {
+        service.giveItem(id, request.playerName(), request.itemName());
+        return ResponseEntity.ok(new ActionResponse("give", request.playerName(), request.itemName()));
     }
 }

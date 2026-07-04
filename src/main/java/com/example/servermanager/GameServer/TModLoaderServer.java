@@ -3,11 +3,17 @@ package com.example.servermanager.GameServer;
 import java.io.BufferedWriter;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import com.example.servermanager.WebSocket.LogWebSocketHandler;
 import com.example.servermanager.dto.ErrorEvent;
 import com.example.servermanager.dto.GameAction;
 import com.example.servermanager.dto.GameActionEvent;
+import com.example.servermanager.dto.ModResponse;
 
 public class TModLoaderServer extends GameServer {
 
@@ -40,39 +46,145 @@ public class TModLoaderServer extends GameServer {
         };
     }
 
-    public void installMod(String modName) {
+
+    public void tpToSpawn(String name) {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
-            writer.write(String.format("mod install %s", modName));
+            writer.write(String.format("spawn %s", name));
             writer.newLine();
             writer.flush();
 
-            broadcast(new GameActionEvent(id, GameAction.MOD_INSTALL, modName, null));
-
         } catch (Exception err) {
             System.err.println(err);
-            broadcast(new ErrorEvent(id, "Mod install failed", err.getMessage()));
-            throw new RuntimeException("Failed to install mod '" + modName + "': " + err.getMessage(), err);
+            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
+            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
         }
     }
 
-    public void reloadMods() {
+    public void tpToPlayer(String name, String secondName) {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
-            writer.write("mod reload");
+            writer.write(String.format("tp %s %s", name, secondName));
             writer.newLine();
             writer.flush();
 
-            broadcast(new GameActionEvent(id, GameAction.MOD_RELOAD, null, null));
+        } catch (Exception err) {
+            System.err.println(err);
+            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
+            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
+        }
+    }
+
+    public void spawnMob(String npcName, String playerName) {
+        try {
+            ensureProcessRunning();
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write(String.format("spawnmob %s %s", npcName, playerName));
+            writer.newLine();
+            writer.flush();
 
         } catch (Exception err) {
             System.err.println(err);
-            broadcast(new ErrorEvent(id, "Mod reload failed", err.getMessage()));
-            throw new RuntimeException("Failed to reload mods: " + err.getMessage(), err);
+            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
+            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
         }
     }
+
+    public void killAll() {
+        try {
+            ensureProcessRunning();
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write("kill all");
+            writer.newLine();
+            writer.flush();
+
+        } catch (Exception err) {
+            System.err.println(err);
+            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
+            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
+        }
+    }
+
+    public void killEntity(String name) {
+        try {
+            ensureProcessRunning();
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write(String.format("kill %s", name));
+            writer.newLine();
+            writer.flush();
+
+        } catch (Exception err) {
+            System.err.println(err);
+            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
+            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
+        }
+    }
+    public void giveItem(String playerName, String itemName) {
+        try {
+            ensureProcessRunning();
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write(String.format("give %s %s", playerName, itemName));
+            writer.newLine();
+            writer.flush();
+
+        } catch (Exception err) {
+            System.err.println(err);
+            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
+            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
+        }
+    }
+
+    public List<ModResponse> queryModList() {
+        ensureProcessRunning();
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        pendingModListQuery = future;
+        currentModList = Collections.synchronizedList(new ArrayList<>());
+
+        try {
+            OutputStream stream = process.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
+            writer.write("modlist");
+            writer.newLine();
+            writer.flush();
+        } catch (Exception err) {
+            pendingModListQuery = null;
+            throw new RuntimeException("Failed to send modlist command", err);
+        }
+
+        try {
+            future.get(1, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            // Timeout is fine — return whatever we collected
+        }
+
+        pendingModListQuery = null;
+
+        List<String> rawLines;
+        synchronized (currentModList) {
+            rawLines = new ArrayList<>(currentModList);
+        }
+
+        return rawLines.stream()
+                .map(raw -> raw.replaceAll("\u001B\\[[0-9;?]*[a-zA-Z]", "").strip())
+                .filter(s -> !s.isEmpty() && !s.contains("modlist"))
+                .map(s -> s.replaceFirst("^:\\s*", ""))
+                .map(ModResponse::new)
+                .toList();
+    }
+
+    @Override
+    public List<ModResponse> getMods() {
+        List<ModResponse> mods = queryModList();
+        broadcast(new GameActionEvent(id, GameAction.MOD_LIST, null, null));
+        return mods;
+    }
+
 }
