@@ -38,6 +38,13 @@ public class GameServerController {
     @Autowired
     public GameServerService service;
 
+    private ResponseEntity<ActionResponse> actionResponse(String action, String target, String result) {
+        if (result != null && result.contains("[ERROR]")) {
+            return ResponseEntity.badRequest().body(new ActionResponse(action, target, result));
+        }
+        return ResponseEntity.ok(new ActionResponse(action, target, result));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ServerResponse> getServer(@PathVariable Long id) {
         ServerResponse server = service.getServer(id);
@@ -136,8 +143,7 @@ public class GameServerController {
 
     @PostMapping("/{id}/settle")
     public ResponseEntity<ActionResponse> settle(@PathVariable Long id) {
-        String result = service.settle(id);
-        return ResponseEntity.ok(new ActionResponse("settle", null, result));
+        return actionResponse("settle", "world", service.settle(id));
     }
 
     @GetMapping("/{id}/time")
@@ -154,37 +160,26 @@ public class GameServerController {
 
     @PostMapping("/{id}/spawn")
     public ResponseEntity<ActionResponse> tpToSpawn(@PathVariable Long id, @RequestBody SpawnRequest request) {
-        String result = service.tpToSpawn(id, request.name());
-        return ResponseEntity.ok(new ActionResponse("spawn", request.name(), result));
+        return actionResponse("spawn", request.name(), service.tpToSpawn(id, request.name()));
     }
 
     @PostMapping("/{id}/tp")
     public ResponseEntity<ActionResponse> tpToPlayer(@PathVariable Long id, @RequestBody TpRequest request) {
-        String result = service.tpToPlayer(id, request.name(), request.target());
-        return ResponseEntity.ok(new ActionResponse("tp", request.name(), result));
+        return actionResponse("tp", request.name(), service.tpToPlayer(id, request.name(), request.target()));
     }
 
     @PostMapping("/{id}/spawnmob")
     public ResponseEntity<ActionResponse> spawnMob(@PathVariable Long id, @RequestBody SpawnMobRequest request) {
-        String result = service.spawnMob(id, request.npcName(), request.playerName());
-        return ResponseEntity.ok(new ActionResponse("spawnmob", request.npcName(), result));
+        return actionResponse("spawnmob", request.npcName(), service.spawnMob(id, request.npcName(), request.playerName()));
     }
 
     @PostMapping("/{id}/kill")
     public ResponseEntity<ActionResponse> kill(@PathVariable Long id, @RequestBody KillEntityRequest request) {
-        String result = service.killEntity(id, request.name());
-        return ResponseEntity.ok(new ActionResponse("kill", request.name(), result));
-    }
-
-    @PostMapping("/{id}/killall")
-    public ResponseEntity<ActionResponse> killAll(@PathVariable Long id) {
-        String result = service.killAll(id);
-        return ResponseEntity.ok(new ActionResponse("killall", null, result));
+        return actionResponse("kill", request.name(), service.killEntity(id, request.name()));
     }
 
     @PostMapping("/{id}/give")
     public ResponseEntity<ActionResponse> giveItem(@PathVariable Long id, @RequestBody GiveItemRequest request) {
-        String result = service.giveItem(id, request.playerName(), request.itemName());
-        return ResponseEntity.ok(new ActionResponse("give", request.playerName(), result));
+        return actionResponse("give", request.playerName(), service.giveItem(id, request.playerName(), request.itemName()));
     }
 }

@@ -47,7 +47,6 @@ public abstract class GameServer {
     protected LogWebSocketHandler logHandler;
     protected ObjectMapper mapper = new ObjectMapper();
 
-    protected final List<String> connectedPlayers = Collections.synchronizedList(new ArrayList<>());
     protected volatile CompletableFuture<String> pendingTimeQuery;
     protected volatile CompletableFuture<String> pendingSeedQuery;
     protected CompletableFuture<Void> pendingModListQuery;
@@ -112,8 +111,6 @@ public abstract class GameServer {
 
             onProcessStarted();
 
-            connectedPlayers.clear();
-
             new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(process.getInputStream()))) {
@@ -127,7 +124,6 @@ public abstract class GameServer {
                                     ServerStates.RUNNING);
                         }
 
-                        trackPlayer(line);
                         checkQueryResponse(line);
                     }
                 } catch (Exception err) {
@@ -157,8 +153,6 @@ public abstract class GameServer {
             writer.write("exit");
             writer.newLine();
             writer.flush();
-
-            connectedPlayers.clear();
 
             broadcastState(new StateEvent(id, ServerStates.OFFLINE, "Server is offline"), ServerStates.OFFLINE);
 
@@ -496,12 +490,6 @@ public abstract class GameServer {
                 .toList();
     }
 
-    public List<PlayerResponse> getPlayers() {
-        synchronized (connectedPlayers) {
-            return connectedPlayers.stream().map(name -> new PlayerResponse(name, null)).toList();
-        }
-    }
-
     public long getId() {
         return id;
     }
@@ -558,28 +546,6 @@ public abstract class GameServer {
             logHandler.broadcast(message);
         } catch (Exception err) {
             System.err.println("Failed to broadcast state event: " + err.getMessage());
-        }
-    }
-
-    private void trackPlayer(String line) {
-        String cleaned = stripAnsi(line);
-        if (cleaned.contains("has joined")) {
-            int idx = cleaned.indexOf(" has joined");
-            String name = cleaned.substring(0, idx).trim();
-            connectedPlayers.add(name);
-            System.out.println("[Player Tracker] " + name + " joined");
-
-        } else if (cleaned.contains("has left")) {
-            int idx = cleaned.indexOf(" has left");
-            String name = cleaned.substring(0, idx).trim();
-            connectedPlayers.remove(name);
-            System.out.println("[Player Tracker] " + name + " left");
-
-        } else if (cleaned.contains("was booted")) {
-            int idx = cleaned.indexOf(" was booted");
-            String target = cleaned.substring(0, idx).trim();
-            connectedPlayers.remove(target);
-            System.out.println("[Player Tracker] " + target + " was booted");
         }
     }
 

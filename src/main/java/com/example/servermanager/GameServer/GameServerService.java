@@ -167,16 +167,6 @@ public class GameServerService {
         }
     }
 
-    public String killAll(long id) {
-        GameServer server = findServerOrThrow(id);
-        if (server instanceof TModLoaderServer tmod) {
-            return tmod.killAll();
-        } else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Server " + id + " is not a TModLoader server");
-        }
-    }
-
     public String settle(long id) {
         GameServer server = findServerOrThrow(id);
         return server.settle();
@@ -185,7 +175,7 @@ public class GameServerService {
 
     public List<PlayerResponse> getPlayers(long id) {
         GameServer server = findServerOrThrow(id);
-        return server.getPlayers();
+        return server.queryPlayers();
     }
 
     public void say(long id, SayRequest request) {

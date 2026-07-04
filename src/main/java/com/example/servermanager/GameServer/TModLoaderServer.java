@@ -47,11 +47,6 @@ public class TModLoaderServer extends GameServer {
         };
     }
 
-    @Override
-    public List<PlayerResponse> getPlayers() {
-        return queryPlayers();
-    }
-
     public String tpToSpawn(String name) {
         try {
             ensureProcessRunning();

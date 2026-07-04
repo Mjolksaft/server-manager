@@ -108,7 +108,7 @@ POST http://localhost:8080/server/0/spawn
 Content-Type: application/json
 
 {
-    "name": "asd"
+    "name": "adggad"
 }
 
 ##################################
@@ -117,7 +117,7 @@ Content-Type: application/json
 
 {
     "name": "test",
-    "target": "test"
+    "target": "asd"
 }
 
 ###########
@@ -134,7 +134,7 @@ POST http://localhost:8080/server/0/kill
 Content-Type: application/json
 
 {
-    "name": "guide"
+    "name": "all"
 }
 
 #################
@@ -143,5 +143,5 @@ Content-Type: application/json
 
 {
     "playerName": "test",
-    "itemName": "adgadg"
+    "itemName": "MeowMere"
 }
