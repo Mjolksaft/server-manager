@@ -8,9 +8,7 @@ import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -55,33 +53,13 @@ public abstract class GameServer {
     protected List<String> currentModList;
     protected CompletableFuture<Void> pendingPlayingQuery;
     protected List<String> currentPlayerList;
-    protected final List<PendingConfirmation> pendingConfirmations = new ArrayList<>();
-
-    private static class PendingConfirmation {
-        final List<String> keywords;
-        final CompletableFuture<String> future;
-
-        PendingConfirmation(List<String> keywords, CompletableFuture<String> future) {
-            this.keywords = keywords;
-            this.future = future;
-        }
-    }
-
-        private String stripAnsi(String line) {
+    private String stripAnsi(String line) {
             if (line == null) return null;
 
             return line
                     .replaceAll("\\u001B\\[[;?0-9]*[a-zA-Z]", "")   // CSI sequences
                     .replaceAll("\\u001B\\][^\\u0007]*(\\u0007|\\u001B\\\\)", ""); // OSC sequences
         }
-
-    protected CompletableFuture<String> expectConfirmation(String... keywords) {
-        CompletableFuture<String> future = new CompletableFuture<>();
-        synchronized (pendingConfirmations) {
-            pendingConfirmations.add(new PendingConfirmation(Arrays.asList(keywords), future));
-        }
-        return future;
-    }
 
     public GameServer(long id, int port, String worldName, String worldPath, String serverPath,
             LogWebSocketHandler logHandler) {
@@ -574,23 +552,6 @@ public abstract class GameServer {
             return;
         }
 
-        synchronized (pendingConfirmations) {
-            Iterator<PendingConfirmation> it = pendingConfirmations.iterator();
-            while (it.hasNext()) {
-                PendingConfirmation pc = it.next();
-                if (pc.future.isDone()) {
-                    it.remove();
-                } else {
-                    for (String kw : pc.keywords) {
-                        if (cleaned.contains(kw)) {
-                            pc.future.complete(cleaned);
-                            it.remove();
-                            return;
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public List<ModResponse> getMods() {

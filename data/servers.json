@@ -1,0 +1,6 @@
+[ {
+  "id" : 0,
+  "port" : 7777,
+  "worldName" : "test",
+  "type" : "TMODLOADER"
+} ]

@@ -112,7 +112,7 @@ function updateTopbar(s) {
         $('serverMeta').textContent = '';
         $('btnStart').disabled = true;
         $('btnStop').disabled = true;
-        $('btnSave').disabled = true;
+        $('btnDelete').style.display = 'none';
         $('tabBtnMods').style.display = 'none';
         return;
     }
@@ -121,7 +121,7 @@ function updateTopbar(s) {
     $('serverMeta').textContent = `Port ${s.port} · ${s.serverPath}`;
     $('btnStart').disabled = s.state === 'RUNNING' || s.state === 'STARTING';
     $('btnStop').disabled = s.state !== 'RUNNING';
-    $('btnSave').disabled = s.state !== 'RUNNING';
+    $('btnDelete').style.display = '';
 }
 
 function esc(s) {
@@ -186,11 +186,16 @@ function stopServer() {
         .catch(e => toast('Stop failed: ' + e.message));
 }
 
-function saveServer() {
+function deleteServer() {
     if (selectedId === null || selectedId === undefined) return;
-    api(`/server/${selectedId}/save`, { method: 'POST' })
-        .then(() => toast('World saved', 'success'))
-        .catch(e => toast('Save failed: ' + e.message));
+    if (!confirm('Delete server "' + (selectedServer()?.worldName || '') + '"? This will also stop it if running.')) return;
+    api(`/server/${selectedId}`, { method: 'DELETE' })
+        .then(() => {
+            toast('Server deleted', 'success');
+            selectedId = null;
+            loadServers();
+        })
+        .catch(e => toast('Delete failed: ' + e.message));
 }
 
 // ── WebSocket Console ──

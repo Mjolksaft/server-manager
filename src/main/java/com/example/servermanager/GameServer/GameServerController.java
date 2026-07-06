@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -62,6 +63,12 @@ public class GameServerController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/start/{id}")
     public ResponseEntity<ServerResponse> start(@PathVariable Long id) {
         ServerResponse response = service.start(id);
@@ -100,12 +107,6 @@ public class GameServerController {
     @GetMapping("/{id}/ban")
     public ResponseEntity<List<KickResponse>> getBans(@PathVariable Long id) {
         List<KickResponse> response = service.bans(id);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/{id}/save")
-    public ResponseEntity<ServerResponse> save(@PathVariable Long id) {
-        ServerResponse response = service.save(id);
         return ResponseEntity.ok(response);
     }
 

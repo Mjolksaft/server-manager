@@ -1,5 +1,9 @@
 package com.example.servermanager.GameServer;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +20,7 @@ import com.example.servermanager.dto.KickRequest;
 import com.example.servermanager.dto.KickResponse;
 import com.example.servermanager.dto.ModResponse;
 import com.example.servermanager.dto.SayRequest;
+import com.example.servermanager.dto.ServerConfig;
 import com.example.servermanager.dto.ServerRequest;
 import com.example.servermanager.dto.ServerResponse;
 import com.example.servermanager.dto.ServerStates;
@@ -23,13 +28,62 @@ import com.example.servermanager.dto.PlayerResponse;
 import com.example.servermanager.dto.PasswordRequest;
 import com.example.servermanager.dto.TimeRequest;
 
+import jakarta.annotation.PostConstruct;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+
 @Service
 public class GameServerService {
     @Autowired
     private LogWebSocketHandler logHandler;
 
+    @Autowired
+    private ObjectMapper mapper;
+
+    private static final Path DATA_DIR = Path.of("data");
+    private static final Path CONFIG_FILE = DATA_DIR.resolve("servers.json");
+
     private Map<Long, GameServer> serverMap = new HashMap<>();
     private AtomicLong idCounter = new AtomicLong(0);
+
+    @PostConstruct
+    public void init() {
+        try {
+            if (Files.exists(CONFIG_FILE)) {
+                List<ServerConfig> configs = mapper.readValue(CONFIG_FILE.toFile(),
+                        new TypeReference<List<ServerConfig>>() {});
+                for (ServerConfig cfg : configs) {
+                    GameServer server;
+                    if (cfg.type() == GameType.TMODLOADER) {
+                        server = new TModLoaderServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler);
+                    } else {
+                        server = new TerrariaServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler);
+                    }
+                    serverMap.put(cfg.id(), server);
+                    if (cfg.id() >= idCounter.get()) {
+                        idCounter.set(cfg.id() + 1);
+                    }
+                }
+                System.out.println("[GameServerService] Loaded " + configs.size() + " servers from " + CONFIG_FILE);
+            }
+        } catch (Exception e) {
+            System.err.println("[GameServerService] Failed to load servers: " + e.getMessage());
+        }
+    }
+
+    private void saveConfig() {
+        try {
+            Files.createDirectories(DATA_DIR);
+            List<ServerConfig> configs = new ArrayList<>();
+            for (GameServer server : serverMap.values()) {
+                configs.add(new ServerConfig(server.getId(), server.getPort(),
+                        server.getWorldName(), server.getType()));
+            }
+            mapper.writerWithDefaultPrettyPrinter().writeValue(CONFIG_FILE.toFile(), configs);
+        } catch (IOException e) {
+            System.err.println("[GameServerService] Failed to save servers: " + e.getMessage());
+        }
+    }
 
     public List<ServerResponse> getServers() {
         return serverMap.values().stream().map(server -> new ServerResponse(
@@ -49,7 +103,6 @@ public class GameServerService {
 
     public ServerResponse create(ServerRequest request) {
         Long id = idCounter.getAndIncrement();
-        System.out.println(request.worldName());
 
         GameServer newInstance;
         if (request.type() == GameType.TMODLOADER) {
@@ -59,20 +112,23 @@ public class GameServerService {
         }
 
         serverMap.put(id, newInstance);
+        saveConfig();
         return new ServerResponse(newInstance.getId(), newInstance.getPort(), newInstance.getWorldName(),
                 newInstance.getServerPath(), newInstance.getState(), newInstance.getType());
+    }
+
+    public void delete(long id) {
+        GameServer server = findServerOrThrow(id);
+        if (server.getState() == ServerStates.RUNNING || server.getState() == ServerStates.STARTING) {
+            server.stop();
+        }
+        serverMap.remove(id);
+        saveConfig();
     }
 
     public ServerResponse start(long id) {
         GameServer server = findServerOrThrow(id);
         server.start();
-        return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
-                server.getState(), server.getType());
-    }
-
-    public ServerResponse save(long id) {
-        GameServer server = findServerOrThrow(id);
-        server.save();
         return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
                 server.getState(), server.getType());
     }
@@ -202,14 +258,6 @@ public class GameServerService {
     public String querySeed(long id) {
         GameServer server = findServerOrThrow(id);
         return server.querySeed();
-    }
-
-    public GameServer findByPort(int port) {
-        return serverMap.values().stream()
-                .filter(s -> s.getPort() == port)
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Server with port " + port + " not found"));
     }
 
     private GameServer findServerOrThrow(long id) {
