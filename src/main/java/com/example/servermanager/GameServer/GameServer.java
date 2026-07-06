@@ -25,6 +25,7 @@ import com.example.servermanager.dto.KickResponse;
 import com.example.servermanager.dto.LogEvent;
 import com.example.servermanager.dto.PasswordRequest;
 import com.example.servermanager.dto.PlayerResponse;
+import com.example.servermanager.dto.GameType;
 import com.example.servermanager.dto.ServerEvent;
 import com.example.servermanager.dto.ServerStates;
 import com.example.servermanager.dto.StateEvent;
@@ -42,6 +43,7 @@ public abstract class GameServer {
     protected String serverPath;
     protected String worldPath;
     protected ServerStates state = ServerStates.OFFLINE;
+    protected GameType type;
 
     protected PtyProcess process;
     protected LogWebSocketHandler logHandler;
@@ -171,12 +173,8 @@ public abstract class GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation("saved");
-            try {
-                return cf.get(3, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return "save command sent";
-            }
+            broadcast(new GameActionEvent(id, GameAction.SAVE, "world", null));
+            return "save command sent";
 
         } catch (Exception err) {
             System.err.println(err);
@@ -212,15 +210,8 @@ public abstract class GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation(" kicked ");
-            try {
-                String result = cf.get(3, TimeUnit.SECONDS);
-                broadcast(new GameActionEvent(id, GameAction.KICK, request.name(), result));
-                return new KickResponse(request.name(), result);
-            } catch (Exception e) {
-                broadcast(new GameActionEvent(id, GameAction.KICK, request.name(), request.details()));
-                return new KickResponse(request.name(), request.details() != null ? request.details() : "Kicked");
-            }
+            broadcast(new GameActionEvent(id, GameAction.KICK, request.name(), null));
+            return new KickResponse(request.name(), request.details() != null ? request.details() : "Kicked");
 
         } catch (Exception err) {
             System.err.println(err);
@@ -238,15 +229,8 @@ public abstract class GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation(" banned ");
-            try {
-                String result = cf.get(3, TimeUnit.SECONDS);
-                broadcast(new GameActionEvent(id, GameAction.BAN, request.name(), result));
-                return new KickResponse(request.name(), result);
-            } catch (Exception e) {
-                broadcast(new GameActionEvent(id, GameAction.BAN, request.name(), request.details()));
-                return new KickResponse(request.name(), request.details() != null ? request.details() : "Banned");
-            }
+            broadcast(new GameActionEvent(id, GameAction.BAN, request.name(), null));
+            return new KickResponse(request.name(), request.details() != null ? request.details() : "Banned");
 
         } catch (Exception err) {
             System.err.println(err);
@@ -327,12 +311,8 @@ public abstract class GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation("Settled");
-            try {
-                return cf.get(3, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return "settle command sent";
-            }
+            broadcast(new GameActionEvent(id, GameAction.SETTLE, "world", null));
+            return "settle command sent";
 
         } catch (Exception err) {
             System.err.println(err);
@@ -512,6 +492,10 @@ public abstract class GameServer {
 
     public ServerStates getState() {
         return state;
+    }
+
+    public GameType getType() {
+        return type;
     }
 
     public void setPort(int newPort) {

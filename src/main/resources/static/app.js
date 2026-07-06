@@ -9,6 +9,18 @@ const BASE = '';
 
 function $(id) { return document.getElementById(id); }
 
+// ── Console view toggle ──
+
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.console-toggle-btn');
+    if (!btn) return;
+    document.querySelectorAll('.console-toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    document.querySelectorAll('#tab-console .console').forEach(el => el.style.display = 'none');
+    $(`console-${view}`).style.display = '';
+});
+
 function api(path, opts = {}) {
     return fetch(BASE + path, {
         headers: { 'Content-Type': 'application/json', ...opts.headers },
@@ -82,7 +94,15 @@ function selectServer(id) {
     updateTopbar(s);
     refreshPlayers();
     refreshBans();
-    if (s.type === 'TMODLOADER') refreshMods();
+    const isTmod = s.type === 'TMODLOADER';
+    $('tabBtnMods').style.display = isTmod ? '' : 'none';
+    if (isTmod) { refreshMods(); }
+    else {
+        const modContent = $('tab-mods');
+        if (modContent.classList.contains('active')) {
+            document.querySelector('[data-tab="console"]').click();
+        }
+    }
 }
 
 function updateTopbar(s) {
@@ -93,6 +113,7 @@ function updateTopbar(s) {
         $('btnStart').disabled = true;
         $('btnStop').disabled = true;
         $('btnSave').disabled = true;
+        $('tabBtnMods').style.display = 'none';
         return;
     }
     $('statusDot').className = 'dot ' + stateClass(s.state);
@@ -183,53 +204,71 @@ function connectWebSocket() {
     websocket.onerror = () => websocket.close();
 }
 
-function handleWsMessage(event) {
-    let data;
-    try { data = JSON.parse(event.data); } catch { data = { type: "raw", message: event.data }; }
-    console.log("WS raw:", event.data);
-    console.log("WS parsed:", data);
+function categorizeLogLine(text) {
+    if (/^:?\s*<[^>]+>/.test(text)) return { tag: '[Comment]', cls: 'level-chat' };
+    if (/\[CMD\]/.test(text) || /Command:/i.test(text)) return { tag: '[Command]', cls: 'level-command' };
+    if (/\b(joined|left)\b/i.test(text)) return { tag: '[Player]', cls: 'level-player' };
+    const trimmed = text.replace(/^:\s*/, '');
+    if (/^\s*(saving|saved|backing|backup|server started|server stopped|server is|settled)/i.test(trimmed)) return { tag: '[Status]', cls: 'level-status' };
+    if (/\berror\b|not found|doesn'?t exist|failed|unable to/i.test(trimmed)) return { tag: '[Error]', cls: 'level-error' };
+    if (/^(time|world seed|spawned|gave|killed|banned|unbanned|kicked)/i.test(trimmed)) return { tag: '[Command]', cls: 'level-command' };
+    return { tag: '[Info]', cls: 'level-info' };
+}
 
-    const consoleEl = $('console');
+function addLogLine(consoleEl, cls, text) {
     const entry = document.createElement('div');
     entry.className = 'log-entry';
-
     const time = document.createElement('span');
     time.className = 'timestamp';
     time.textContent = new Date().toLocaleTimeString();
     entry.appendChild(time);
-
     const msg = document.createElement('span');
+    msg.className = cls;
+    msg.textContent = text;
+    entry.appendChild(msg);
+    consoleEl.appendChild(entry);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+    while (consoleEl.children.length > 500) consoleEl.removeChild(consoleEl.firstChild);
+}
+
+function handleWsMessage(event) {
+    let data;
+    try { data = JSON.parse(event.data); } catch { data = { type: "raw", message: event.data }; }
+    console.log("WS raw:", event.data);
+
+    let cls = 'level-info';
+    let text = '';
+    let pretty = true;
 
     switch (data.type) {
         case 'state':
-            msg.className = 'level-state';
-            msg.textContent = `[${data.state}] ${data.text}`;
-            // update server state in sidebar if it matches
+            cls = 'level-state';
+            text = `[${data.state}] ${data.text}`;
             const srv = servers.find(s => s.id === data.serverId);
             if (srv) { srv.state = data.state; renderServerList(); if (srv.id === selectedId) updateTopbar(srv); }
             break;
         case 'log':
-            msg.className = 'level-info';
-            msg.textContent = data.text;
+            const cat = categorizeLogLine(data.text);
+            cls = cat.cls;
+            text = cat.tag + ' ' + data.text;
+            pretty = cat.tag !== '[Info]';
             break;
         case 'error':
-            msg.className = 'level-error';
-            msg.textContent = `ERROR: ${data.reason} — ${data.detail}`;
+            cls = 'level-error';
+            text = `ERROR: ${data.reason} — ${data.detail}`;
             break;
         case 'game_action':
-            msg.className = 'level-action';
-            msg.textContent = `[${data.action}]${data.target ? ' ' + data.target : ''}${data.detail ? ' — ' + data.detail : ''}`;
+            cls = 'level-action';
+            text = `[${data.action}]${data.target ? ' ' + data.target : ''}${data.detail ? ' — ' + data.detail : ''}`;
             break;
         default:
-            msg.className = 'level-info';
-            msg.textContent = event.data;
+            cls = 'level-info';
+            text = event.data;
+            break;
     }
 
-    entry.appendChild(msg);
-    consoleEl.appendChild(entry);
-    consoleEl.scrollTop = consoleEl.scrollHeight;
-    // keep last 500 lines
-    while (consoleEl.children.length > 500) consoleEl.removeChild(consoleEl.firstChild);
+    addLogLine($('console-raw'), cls, text);
+    if (pretty) addLogLine($('console-pretty'), cls, text);
 }
 
 // ── Players ──

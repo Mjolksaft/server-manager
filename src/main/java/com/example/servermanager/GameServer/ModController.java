@@ -19,18 +19,25 @@ import tools.jackson.databind.ObjectMapper;
 public class ModController {
 
     @Autowired
-    private GameServerService service;
-
-    @Autowired
     private LogWebSocketHandler logHandler;
 
-    private ObjectMapper mapper = new ObjectMapper();
+    @Autowired
+    private ObjectMapper mapper;
 
     @PostMapping("/{port}/log")
     public ResponseEntity<ActionResponse> logAction(@PathVariable int port, @RequestBody ModActionEvent event) {
-        service.findByPort(port);
         try {
-            String json = mapper.writeValueAsString(event);
+            var obj = mapper.createObjectNode();
+            obj.put("type", "game_action");
+            obj.put("serverId", -1);
+            obj.put("port", port);
+            obj.put("action", event.action() != null ? event.action() : "mod_event");
+            obj.put("sender", event.sender());
+            obj.put("target", event.target());
+            obj.put("detail", event.detail());
+            obj.put("result", event.result());
+            String json = mapper.writeValueAsString(obj);
+            System.out.println("[ModController] broadcasting: " + json);
             logHandler.broadcast(json);
         } catch (Exception e) {
             System.err.println("Failed to broadcast mod event: " + e.getMessage());

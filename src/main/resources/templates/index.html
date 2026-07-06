@@ -71,6 +71,17 @@
         .tab-content { flex: 1; overflow-y: auto; padding: 0; display: none; }
         .tab-content.active { display: flex; flex-direction: column; }
         /* console */
+        .console-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .console-toggle {
+            display: flex; border-bottom: 1px solid #30363d; background: #0d1117;
+            padding: 0 12px; flex-shrink: 0;
+        }
+        .console-toggle button {
+            padding: 6px 14px; background: none; border: none; color: #8b949e;
+            cursor: pointer; font-size: 12px; border-bottom: 2px solid transparent;
+        }
+        .console-toggle button:hover { color: #c9d1d9; }
+        .console-toggle button.active { color: #f0f6fc; border-bottom-color: #f0f6fc; }
         .console {
             flex: 1; background: #0d1117; padding: 12px; font-family: 'Consolas', 'Courier New', monospace;
             font-size: 13px; overflow-y: auto; line-height: 1.5; min-height: 200px;
@@ -83,6 +94,10 @@
         .console .level-success { color: #3fb950; }
         .console .level-action { color: #79c0ff; }
         .console .level-state { color: #d2a8ff; }
+        .console .level-chat { color: #7ee787; }
+        .console .level-player { color: #79c0ff; }
+        .console .level-status { color: #d29922; }
+        .console .level-command { color: #ffa657; }
         /* panels */
         .panel { padding: 16px; }
         .panel h3 { margin-bottom: 12px; font-size: 14px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; }
@@ -169,12 +184,19 @@
             <button data-tab="players">Players</button>
             <button data-tab="controls">Controls</button>
             <button data-tab="commands">Commands</button>
-            <button data-tab="mods">Mods</button>
+            <button data-tab="mods" id="tabBtnMods">Mods</button>
             <button data-tab="bans">Bans</button>
         </div>
 
         <div class="tab-content active" id="tab-console">
-            <div class="console" id="console"></div>
+            <div class="console-wrap">
+                <div class="console-toggle">
+                    <button class="console-toggle-btn active" data-view="pretty">Pwetty</button>
+                    <button class="console-toggle-btn" data-view="raw">Raw</button>
+                </div>
+                <div class="console" id="console-pretty"></div>
+                <div class="console" id="console-raw" style="display:none"></div>
+            </div>
         </div>
 
         <div class="tab-content" id="tab-players">

@@ -37,13 +37,14 @@ public class GameServerService {
                 server.getPort(),
                 server.getWorldName(),
                 server.getServerPath(),
-                server.getState())).toList();
+                server.getState(),
+                server.getType())).toList();
     }
 
     public ServerResponse getServer(long id) {
         GameServer server = findServerOrThrow(id);
         return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
-                server.getState());
+                server.getState(), server.getType());
     }
 
     public ServerResponse create(ServerRequest request) {
@@ -59,28 +60,28 @@ public class GameServerService {
 
         serverMap.put(id, newInstance);
         return new ServerResponse(newInstance.getId(), newInstance.getPort(), newInstance.getWorldName(),
-                newInstance.getServerPath(), newInstance.getState());
+                newInstance.getServerPath(), newInstance.getState(), newInstance.getType());
     }
 
     public ServerResponse start(long id) {
         GameServer server = findServerOrThrow(id);
         server.start();
         return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
-                server.getState());
+                server.getState(), server.getType());
     }
 
     public ServerResponse save(long id) {
         GameServer server = findServerOrThrow(id);
         server.save();
         return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
-                server.getState());
+                server.getState(), server.getType());
     }
 
     public ServerResponse stop(long id) {
         GameServer server = findServerOrThrow(id);
         server.stop();
         return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
-                server.getState());
+                server.getState(), server.getType());
     }
 
     public ServerStates getState(Long id) {

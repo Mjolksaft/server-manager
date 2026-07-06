@@ -5,5 +5,6 @@ public record ServerResponse(
     int port,
     String worldName,
     String serverPath,
-    ServerStates state
+    ServerStates state,
+    GameType type
 ) {}

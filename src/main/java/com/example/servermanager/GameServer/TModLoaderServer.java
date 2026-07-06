@@ -11,10 +11,10 @@ import java.util.concurrent.TimeUnit;
 
 import com.example.servermanager.WebSocket.LogWebSocketHandler;
 import com.example.servermanager.dto.ErrorEvent;
+import com.example.servermanager.dto.GameType;
 import com.example.servermanager.dto.GameAction;
 import com.example.servermanager.dto.GameActionEvent;
 import com.example.servermanager.dto.ModResponse;
-import com.example.servermanager.dto.PlayerResponse;
 
 public class TModLoaderServer extends GameServer {
 
@@ -23,6 +23,7 @@ public class TModLoaderServer extends GameServer {
                 String.format("C:/Users/kalla/Documents/My Games/Terraria/tModLoader/Worlds/%s.wld", worldName),
                 "D:/steam/steamapps/common/tModLoader/",
                 logHandler);
+        this.type = GameType.TMODLOADER;
     }
 
     @Override
@@ -56,12 +57,8 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation("[CMD] spawn", "[ERROR] spawn");
-            try {
-                return cf.get(3, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return "spawn command sent";
-            }
+            broadcast(new GameActionEvent(id, GameAction.SPAWN, name, null));
+            return "spawn command sent";
 
         } catch (Exception err) {
             System.err.println(err);
@@ -79,12 +76,8 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation("[CMD] tp", "[ERROR] tp");
-            try {
-                return cf.get(3, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return "tp command sent";
-            }
+            broadcast(new GameActionEvent(id, GameAction.TP, name + " -> " + secondName, null));
+            return "tp command sent";
 
         } catch (Exception err) {
             System.err.println(err);
@@ -102,12 +95,8 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation("[CMD] spawnmob", "[ERROR] spawnmob");
-            try {
-                return cf.get(3, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return "spawnmob command sent";
-            }
+            broadcast(new GameActionEvent(id, GameAction.SPAWN_MOB, npcName + " @" + playerName, null));
+            return "spawnmob command sent";
 
         } catch (Exception err) {
             System.err.println(err);
@@ -125,12 +114,8 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation("[CMD] kill", "[ERROR] kill");
-            try {
-                return cf.get(3, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return "kill command sent";
-            }
+            broadcast(new GameActionEvent(id, GameAction.KILL_ENTITY, name, null));
+            return "kill command sent";
 
         } catch (Exception err) {
             System.err.println(err);
@@ -148,12 +133,8 @@ public class TModLoaderServer extends GameServer {
             writer.newLine();
             writer.flush();
 
-            CompletableFuture<String> cf = expectConfirmation("[CMD] give", "[ERROR] give");
-            try {
-                return cf.get(3, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return "give command sent";
-            }
+            broadcast(new GameActionEvent(id, GameAction.GIVE, playerName + " " + itemName, null));
+            return "give command sent";
 
         } catch (Exception err) {
             System.err.println(err);

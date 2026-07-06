@@ -1,6 +1,7 @@
 package com.example.servermanager.GameServer;
 
 import com.example.servermanager.WebSocket.LogWebSocketHandler;
+import com.example.servermanager.dto.GameType;
 
 public class TerrariaServer extends GameServer {
 
@@ -9,6 +10,7 @@ public class TerrariaServer extends GameServer {
                 String.format("C:/Users/kalla/Documents/My Games/Terraria/Worlds/%s.wld", worldName),
                 "D:/steam/steamapps/common/Terraria/",
                 logHandler);
+        this.type = GameType.TERRARIA;
     }
 
     @Override
