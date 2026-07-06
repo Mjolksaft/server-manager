@@ -1,38 +1,331 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-
+    <title>Server Manager</title>
     <style>
-        .logContainer {
-            height: 400px;
-            overflow-y: auto;
-            border: 1px solid #000000
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117; color: #c9d1d9; display: flex; height: 100vh;
         }
+        /* sidebar */
+        .sidebar {
+            width: 260px; background: #161b22; border-right: 1px solid #30363d;
+            display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        .sidebar h1 { font-size: 16px; padding: 16px; border-bottom: 1px solid #30363d; }
+        .sidebar .create-btn {
+            margin: 12px; padding: 8px; background: #238636; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        .sidebar .create-btn:hover { background: #2ea043; }
+        .server-list { flex: 1; overflow-y: auto; padding: 8px; }
+        .server-item {
+            padding: 10px 12px; border-radius: 6px; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+        }
+        .server-item:hover { background: #1c2128; }
+        .server-item.active { background: #1f6feb22; border: 1px solid #1f6feb55; }
+        .server-item .dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        }
+        .dot.online { background: #3fb950; }
+        .dot.offline { background: #8b949e; }
+        .dot.starting { background: #d29922; }
+        .dot.crashed { background: #f85149; }
+        .server-item .info { flex: 1; min-width: 0; }
+        .server-item .name { font-size: 14px; font-weight: 500; }
+        .server-item .meta { font-size: 11px; color: #8b949e; }
+        /* main */
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .topbar {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+            border-bottom: 1px solid #30363d; background: #161b22; flex-wrap: wrap;
+        }
+        .topbar .status { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+        .topbar .btn {
+            padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer;
+            font-size: 13px; font-weight: 500;
+        }
+        .btn-start { background: #238636; color: #fff; }
+        .btn-start:hover { background: #2ea043; }
+        .btn-stop { background: #da3633; color: #fff; }
+        .btn-stop:hover { background: #f85149; }
+        .btn-save { background: #1f6feb; color: #fff; }
+        .btn-save:hover { background: #388bfd; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        /* content */
+        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .tabs {
+            display: flex; border-bottom: 1px solid #30363d; background: #0d1117;
+            padding: 0 12px; flex-shrink: 0;
+        }
+        .tabs button {
+            padding: 10px 16px; background: none; border: none; color: #8b949e;
+            cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent;
+        }
+        .tabs button:hover { color: #c9d1d9; }
+        .tabs button.active { color: #f0f6fc; border-bottom-color: #f0f6fc; }
+        .tab-content { flex: 1; overflow-y: auto; padding: 0; display: none; }
+        .tab-content.active { display: flex; flex-direction: column; }
+        /* console */
+        .console {
+            flex: 1; background: #0d1117; padding: 12px; font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px; overflow-y: auto; line-height: 1.5; min-height: 200px;
+        }
+        .console .log-entry { display: flex; gap: 8px; padding: 1px 0; }
+        .console .timestamp { color: #484f58; flex-shrink: 0; }
+        .console .level-info { color: #c9d1d9; }
+        .console .level-error { color: #f85149; }
+        .console .level-warn { color: #d29922; }
+        .console .level-success { color: #3fb950; }
+        .console .level-action { color: #79c0ff; }
+        .console .level-state { color: #d2a8ff; }
+        /* panels */
+        .panel { padding: 16px; }
+        .panel h3 { margin-bottom: 12px; font-size: 14px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .card {
+            background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px;
+        }
+        .card label { display: block; font-size: 12px; color: #8b949e; margin-bottom: 4px; }
+        .card input, .card select {
+            width: 100%; padding: 8px 10px; background: #0d1117; border: 1px solid #30363d;
+            border-radius: 6px; color: #c9d1d9; font-size: 14px; margin-bottom: 8px;
+        }
+        .card input:focus, .card select:focus { outline: none; border-color: #1f6feb; }
+        .card .btn { width: 100%; padding: 8px; margin-top: 4px; }
+        .card-row { display: flex; gap: 8px; }
+        .card-row input { flex: 1; }
+        .card-row .btn { width: auto; flex-shrink: 0; }
+        /* table */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; }
+        th { color: #8b949e; font-weight: 500; font-size: 12px; text-transform: uppercase; }
+        td .btn-sm {
+            padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;
+        }
+        .btn-danger { background: #da3633; color: #fff; }
+        .btn-danger:hover { background: #f85149; }
+        .btn-primary { background: #1f6feb; color: #fff; }
+        .btn-primary:hover { background: #388bfd; }
+        .empty-state { color: #8b949e; text-align: center; padding: 40px; font-size: 14px; }
+        /* modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: #00000088;
+            align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+            padding: 24px; width: 400px; max-width: 90vw;
+        }
+        .modal h2 { margin-bottom: 16px; font-size: 18px; }
+        .modal input, .modal select {
+            width: 100%; padding: 8px 10px; background: #0d1117; border: 1px solid #30363d;
+            border-radius: 6px; color: #c9d1d9; font-size: 14px; margin-bottom: 12px;
+        }
+        .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+        .modal .modal-actions .btn { padding: 8px 20px; width: auto; }
+        .btn-cancel { background: #21262d; color: #c9d1d9; }
+        .btn-cancel:hover { background: #30363d; }
+        .toast {
+            position: fixed; bottom: 20px; right: 20px; padding: 10px 16px; border-radius: 8px;
+            font-size: 13px; z-index: 200; display: none; max-width: 400px;
+        }
+        .toast.error { background: #da3633; color: #fff; display: block; }
+        .toast.success { background: #238636; color: #fff; display: block; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
     </style>
 </head>
-
 <body>
 
-    <p id="serverStatus">
-        <span th:switch="${serverState}">
-            <span th:case="'STOPPED'">Stopped</span>
-            <span th:case="'STARTING'">Starting...</span>
-            <span th:case="'RUNNING'">Running</span>
-            <span th:case="'CRASHED'">Crashed</span>
-        </span>
-    </p>
+<div class="sidebar">
+    <h1>Server Manager</h1>
+    <button class="create-btn" onclick="showCreateModal()">+ Create Server</button>
+    <div class="server-list" id="serverList"></div>
+</div>
 
-    <button id="startServer">Start Server</button>
-
-    <button id="stopServer">Stop Server</button>
-
-    <div class="logContainer" id="logs">
+<div class="main">
+    <div class="topbar" id="topbar">
+        <div class="status">
+            <span class="dot offline" id="statusDot"></span>
+            <span id="statusLabel">Select a server</span>
+        </div>
+        <button class="btn btn-start" id="btnStart" onclick="startServer()">Start</button>
+        <button class="btn btn-stop" id="btnStop" onclick="stopServer()">Stop</button>
+        <button class="btn btn-save" id="btnSave" onclick="saveServer()">Save</button>
+        <span style="color:#8b949e;font-size:13px;margin-left:auto" id="serverMeta"></span>
     </div>
-</body>
-<script src="/app.js"></script>
 
+    <div class="content">
+        <div class="tabs" id="tabs">
+            <button class="active" data-tab="console">Console</button>
+            <button data-tab="players">Players</button>
+            <button data-tab="controls">Controls</button>
+            <button data-tab="commands">Commands</button>
+            <button data-tab="mods">Mods</button>
+            <button data-tab="bans">Bans</button>
+        </div>
+
+        <div class="tab-content active" id="tab-console">
+            <div class="console" id="console"></div>
+        </div>
+
+        <div class="tab-content" id="tab-players">
+            <div class="panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <h3>Connected Players</h3>
+                    <button class="btn btn-primary" onclick="refreshPlayers()" style="width:auto;padding:6px 14px">Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Name</th><th>IP</th><th>Actions</th></tr></thead>
+                        <tbody id="playerTable"><tr><td colspan="3" class="empty-state">Select a running server</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-controls">
+            <div class="panel">
+                <div class="grid">
+                    <div class="card">
+                        <label>Say Message</label>
+                        <input type="text" id="sayInput" placeholder="Message to all players">
+                        <button class="btn btn-primary" onclick="sayMessage()">Send</button>
+                    </div>
+                    <div class="card">
+                        <label>Set Time</label>
+                        <select id="timeSelect">
+                            <option value="dawn">Dawn</option>
+                            <option value="noon">Noon</option>
+                            <option value="dusk">Dusk</option>
+                            <option value="midnight">Midnight</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="setTime()">Set</button>
+                    </div>
+                    <div class="card">
+                        <label>Set Password</label>
+                        <input type="text" id="passwordInput" placeholder="Leave empty to clear">
+                        <button class="btn btn-primary" onclick="setPassword()">Set</button>
+                    </div>
+                    <div class="card">
+                        <label>Query Time</label>
+                        <div id="timeDisplay" style="padding:8px 0;color:#8b949e">Click to query</div>
+                        <button class="btn btn-primary" onclick="queryTime()">Query</button>
+                    </div>
+                    <div class="card">
+                        <label>World Seed</label>
+                        <div id="seedDisplay" style="padding:8px 0;color:#8b949e">Click to query</div>
+                        <button class="btn btn-primary" onclick="querySeed()">Query</button>
+                    </div>
+                    <div class="card">
+                        <label></label>
+                        <button class="btn btn-save" onclick="settleWater()" style="margin-top:20px">Settle Water</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-commands">
+            <div class="panel">
+                <div class="grid">
+                    <div class="card">
+                        <label>TP to Spawn</label>
+                        <input type="text" id="spawnInput" placeholder="Player name">
+                        <button class="btn btn-primary" onclick="tpToSpawn()">TP</button>
+                    </div>
+                    <div class="card">
+                        <label>TP to Player</label>
+                        <input type="text" id="tpFromInput" placeholder="Player to move">
+                        <input type="text" id="tpToInput" placeholder="Target player">
+                        <button class="btn btn-primary" onclick="tpToPlayer()">TP</button>
+                    </div>
+                    <div class="card">
+                        <label>Spawn Mob</label>
+                        <input type="text" id="spawnMobNpc" placeholder="NPC name">
+                        <input type="text" id="spawnMobPlayer" placeholder="Player name">
+                        <button class="btn btn-primary" onclick="spawnMob()">Spawn</button>
+                    </div>
+                    <div class="card">
+                        <label>Kill Entity</label>
+                        <input type="text" id="killInput" placeholder="Entity / player name">
+                        <button class="btn btn-danger" onclick="killEntity()">Kill</button>
+                    </div>
+                    <div class="card">
+                        <label>Give Item</label>
+                        <input type="text" id="givePlayerInput" placeholder="Player name">
+                        <input type="text" id="giveItemInput" placeholder="Item name">
+                        <button class="btn btn-primary" onclick="giveItem()">Give</button>
+                    </div>
+                </div>
+                <p style="color:#8b949e;font-size:12px;margin-top:12px">Commands tab requires a tModLoader server.</p>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-mods">
+            <div class="panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <h3>Installed Mods</h3>
+                    <button class="btn btn-primary" onclick="refreshMods()" style="width:auto;padding:6px 14px">Refresh</button>
+                </div>
+                <div id="modList" class="empty-state">Select a tModLoader server</div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-bans">
+            <div class="panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <h3>Banned Players</h3>
+                    <button class="btn btn-primary" onclick="refreshBans()" style="width:auto;padding:6px 14px">Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Name</th><th>IP / Reason</th><th>Actions</th></tr></thead>
+                        <tbody id="banTable"><tr><td colspan="3" class="empty-state">Select a server</td></tr></tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px;display:flex;gap:8px">
+                    <input type="text" id="banNameInput" placeholder="Player name" style="padding:8px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:14px;flex:1">
+                    <button class="btn btn-danger" onclick="banPlayer()" style="width:auto">Ban</button>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:8px">
+                    <input type="text" id="unbanNameInput" placeholder="Player name" style="padding:8px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:14px;flex:1">
+                    <button class="btn btn-primary" onclick="unbanPlayer()" style="width:auto">Unban</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal-overlay" id="createModal">
+    <div class="modal">
+        <h2>Create Server</h2>
+        <label>Server Type</label>
+        <select id="createType">
+            <option value="TERRARIA">Terraria</option>
+            <option value="TMODLOADER" selected>tModLoader</option>
+        </select>
+        <label>Port</label>
+        <input type="number" id="createPort" value="7777" min="1024" max="65535">
+        <label>World Name</label>
+        <input type="text" id="createWorld" placeholder="MyWorld">
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeCreateModal()">Cancel</button>
+            <button class="btn btn-start" onclick="createServer()">Create</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/app.js"></script>
+</body>
 </html>

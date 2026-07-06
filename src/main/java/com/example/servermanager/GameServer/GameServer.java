@@ -65,9 +65,13 @@ public abstract class GameServer {
         }
     }
 
-    private String stripAnsi(String line) {
-        return line.replaceAll("\u001B\\[[0-9;?]*[a-zA-Z]", "").strip();
-    }
+        private String stripAnsi(String line) {
+            if (line == null) return null;
+
+            return line
+                    .replaceAll("\\u001B\\[[;?0-9]*[a-zA-Z]", "")   // CSI sequences
+                    .replaceAll("\\u001B\\][^\\u0007]*(\\u0007|\\u001B\\\\)", ""); // OSC sequences
+        }
 
     protected CompletableFuture<String> expectConfirmation(String... keywords) {
         CompletableFuture<String> future = new CompletableFuture<>();
@@ -115,14 +119,15 @@ public abstract class GameServer {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         System.out.println("[" + getExecutableName() + "]: " + line);
-                        broadcast(new LogEvent(id, line));
+                        String cleaned = stripAnsi(line);
+                        broadcast(new LogEvent(id, cleaned));
 
-                        if (line.contains(getStartupDetectionString())) {
+                        if (cleaned.contains(getStartupDetectionString())) {
                             broadcastState(new StateEvent(id, ServerStates.RUNNING, "Server has started!"),
                                     ServerStates.RUNNING);
                         }
 
-                        checkQueryResponse(line);
+                        checkQueryResponse(cleaned);
                     }
                 } catch (Exception err) {
                     System.out.println("Server output stream closed.");
@@ -131,7 +136,7 @@ public abstract class GameServer {
 
         } catch (Exception err) {
             System.err.println(err);
-            broadcastState(new ErrorEvent(id, err.getCause().toString(), err.getMessage()), ServerStates.CRASHED);
+            broadcastState(new ErrorEvent(id, err.getCause() != null ? err.getCause().toString() : "Unknown", err.getMessage()), ServerStates.CRASHED);
         }
     }
 

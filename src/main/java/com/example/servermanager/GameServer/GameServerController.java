@@ -127,7 +127,7 @@ public class GameServerController {
         return ResponseEntity.ok(new ActionResponse("password", "server", "sets the password to the server"));
     }
 
-    @PostMapping("/{id}/mods")
+    @GetMapping("/{id}/mods")
     public ResponseEntity<List<ModResponse>> getMods(@PathVariable Long id) {
         List<ModResponse> modList = service.getMods(id);
         return ResponseEntity.ok(modList);

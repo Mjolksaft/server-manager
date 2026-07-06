@@ -15,12 +15,12 @@ public class LogWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        sessions.add(session);  // remember this browser
+        sessions.add(session); 
     }
     
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        sessions.remove(session);  // forget this browser
+        sessions.remove(session); 
     }
 
     public void broadcast(String message) {

@@ -3,7 +3,7 @@ POST http://localhost:8080/server/create
 Content-Type: application/json
 
 {
-    "port": "7777",
+    "port": "7773",
     "worldName": "test",
     "type": "TERRARIA"
 }
@@ -139,7 +139,7 @@ Content-Type: application/json
 
 
 ###################################
-POST http://localhost:8080/server/start/0
+POST http://localhost:8080/server/start/2
 
 ##################################
 POST http://localhost:8080/server/create

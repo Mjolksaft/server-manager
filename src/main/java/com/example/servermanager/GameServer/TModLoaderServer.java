@@ -88,8 +88,8 @@ public class TModLoaderServer extends GameServer {
 
         } catch (Exception err) {
             System.err.println(err);
-            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
-            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
+            broadcast(new ErrorEvent(id, "tp to player", err.getMessage()));
+            throw new RuntimeException("Failed to tp to player: " + err.getMessage(), err);
         }
     }
 
@@ -111,8 +111,8 @@ public class TModLoaderServer extends GameServer {
 
         } catch (Exception err) {
             System.err.println(err);
-            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
-            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
+            broadcast(new ErrorEvent(id, "spawn mob", err.getMessage()));
+            throw new RuntimeException("Failed to spawn mob: " + err.getMessage(), err);
         }
     }
 
@@ -134,8 +134,8 @@ public class TModLoaderServer extends GameServer {
 
         } catch (Exception err) {
             System.err.println(err);
-            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
-            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
+            broadcast(new ErrorEvent(id, "kill entity", err.getMessage()));
+            throw new RuntimeException("Failed to kill entity: " + err.getMessage(), err);
         }
     }
 
@@ -157,8 +157,8 @@ public class TModLoaderServer extends GameServer {
 
         } catch (Exception err) {
             System.err.println(err);
-            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
-            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
+            broadcast(new ErrorEvent(id, "give item", err.getMessage()));
+            throw new RuntimeException("Failed to give item: " + err.getMessage(), err);
         }
     }
 
