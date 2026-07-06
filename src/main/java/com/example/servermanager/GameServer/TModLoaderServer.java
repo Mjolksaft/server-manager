@@ -116,29 +116,6 @@ public class TModLoaderServer extends GameServer {
         }
     }
 
-    public String killAll() {
-        try {
-            ensureProcessRunning();
-            OutputStream stream = process.getOutputStream();
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
-            writer.write("kill all");
-            writer.newLine();
-            writer.flush();
-
-            CompletableFuture<String> cf = expectConfirmation("[CMD] kill", "[ERROR] kill");
-            try {
-                return cf.get(3, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return "kill all command sent";
-            }
-
-        } catch (Exception err) {
-            System.err.println(err);
-            broadcast(new ErrorEvent(id, "tp to spawn", err.getMessage()));
-            throw new RuntimeException("Failed to tp to spawn: " + err.getMessage(), err);
-        }
-    }
-
     public String killEntity(String name) {
         try {
             ensureProcessRunning();

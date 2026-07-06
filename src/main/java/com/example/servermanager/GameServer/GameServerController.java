@@ -16,7 +16,6 @@ import com.example.servermanager.dto.GiveItemRequest;
 import com.example.servermanager.dto.KickRequest;
 import com.example.servermanager.dto.KickResponse;
 import com.example.servermanager.dto.KillEntityRequest;
-import com.example.servermanager.dto.ModInstallRequest;
 import com.example.servermanager.dto.ModResponse;
 import com.example.servermanager.dto.SayRequest;
 import com.example.servermanager.dto.SeedResponse;

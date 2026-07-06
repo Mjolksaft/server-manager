@@ -8,21 +8,12 @@ Content-Type: application/json
     "type": "TERRARIA"
 }
 
-##################################
-POST http://localhost:8080/server/create
-Content-Type: application/json
 
-{
-    "port": "7777",
-    "worldName": "test",
-    "type": "TMODLOADER"
-}
 
 #################################
 GET http://localhost:8080/server/
 
-################################
-GET http://localhost:8080/server/0
+
 
 ###################################
 POST http://localhost:8080/server/start/0
@@ -108,7 +99,7 @@ POST http://localhost:8080/server/0/spawn
 Content-Type: application/json
 
 {
-    "name": "adggad"
+    "name": "test"
 }
 
 ##################################
@@ -117,7 +108,7 @@ Content-Type: application/json
 
 {
     "name": "test",
-    "target": "asd"
+    "target": "test"
 }
 
 ###########
@@ -143,5 +134,19 @@ Content-Type: application/json
 
 {
     "playerName": "test",
-    "itemName": "MeowMere"
+    "itemName": "sand block"
+}
+
+
+###################################
+POST http://localhost:8080/server/start/0
+
+##################################
+POST http://localhost:8080/server/create
+Content-Type: application/json
+
+{
+    "port": "7777",
+    "worldName": "test",
+    "type": "TMODLOADER"
 }

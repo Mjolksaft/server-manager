@@ -203,6 +203,14 @@ public class GameServerService {
         return server.querySeed();
     }
 
+    public GameServer findByPort(int port) {
+        return serverMap.values().stream()
+                .filter(s -> s.getPort() == port)
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Server with port " + port + " not found"));
+    }
+
     private GameServer findServerOrThrow(long id) {
         GameServer server = serverMap.get(id);
         if (server == null) {

@@ -109,8 +109,6 @@ public abstract class GameServer {
                     .setDirectory(getWorkingDirectory())
                     .start();
 
-            onProcessStarted();
-
             new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(process.getInputStream()))) {
@@ -135,9 +133,6 @@ public abstract class GameServer {
             System.err.println(err);
             broadcastState(new ErrorEvent(id, err.getCause().toString(), err.getMessage()), ServerStates.CRASHED);
         }
-    }
-
-    protected void onProcessStarted() {
     }
 
     protected String getStartupDetectionString() {
