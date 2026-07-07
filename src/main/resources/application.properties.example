@@ -1,0 +1,12 @@
+spring.application.name=server-manager
+server.data.dir=./data
+app.api-key=CHANGE_ME_TO_A_RANDOM_STRING
+
+# Terraria paths
+terraria.server.dir=/path/to/terraria
+terraria.worlds.dir=/path/to/terraria/worlds
+
+# tModLoader paths
+tmodloader.server.dir=/path/to/tmodloader
+tmodloader.worlds.dir=/path/to/tmodloader/worlds
+tmodloader.mods.enabled.path=/path/to/tmodloader/mods/enabled.json

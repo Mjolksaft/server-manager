@@ -46,6 +46,9 @@ buildNumber.properties
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
 
+### Server Manager ###
+src/main/resources/application.properties
+
 ### VisualStudioCode ###
 .vscode/*
 !.vscode/settings.json
