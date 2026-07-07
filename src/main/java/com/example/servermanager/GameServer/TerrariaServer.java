@@ -5,11 +5,12 @@ import com.example.servermanager.dto.GameType;
 
 public class TerrariaServer extends GameServer {
 
-    public TerrariaServer(long id, int port, String worldName, LogWebSocketHandler logHandler, String enabledModsFile) {
+    public TerrariaServer(long id, int port, String worldName, LogWebSocketHandler logHandler,
+                          String enabledModsFile, String worldsDir, String serverDir, String dataDir) {
         super(id, port, worldName,
-                String.format("C:/Users/kalla/Documents/My Games/Terraria/Worlds/%s.wld", worldName),
-                "D:/steam/steamapps/common/Terraria/",
-                logHandler, enabledModsFile);
+                worldsDir + "/" + worldName + ".wld",
+                serverDir,
+                logHandler, enabledModsFile, dataDir);
         this.type = GameType.TERRARIA;
     }
 
@@ -20,6 +21,6 @@ public class TerrariaServer extends GameServer {
 
     @Override
     public String getWorkingDirectory() {
-        return "D:/steam/steamapps/common/Terraria";
+        return serverDir;
     }
 }

@@ -23,14 +23,16 @@ import tools.jackson.core.type.TypeReference;
 
 public class TModLoaderServer extends GameServer {
 
-    private static final Path MODS_ENABLED_PATH = Path.of(
-        "C:/Users/kalla/Documents/My Games/Terraria/tModLoader/Mods/enabled.json");
+    private final Path modsEnabledPath;
 
-    public TModLoaderServer(long id, int port, String worldName, LogWebSocketHandler logHandler, String enabledModsFile) {
+    public TModLoaderServer(long id, int port, String worldName, LogWebSocketHandler logHandler,
+                            String enabledModsFile, String worldsDir, String serverDir, String modsEnabledPath,
+                            String dataDir) {
         super(id, port, worldName,
-                String.format("C:/Users/kalla/Documents/My Games/Terraria/tModLoader/Worlds/%s.wld", worldName),
-                "D:/steam/steamapps/common/tModLoader/",
-                logHandler, enabledModsFile);
+                worldsDir + "/" + worldName + ".wld",
+                serverDir,
+                logHandler, enabledModsFile, dataDir);
+        this.modsEnabledPath = Path.of(modsEnabledPath);
         this.type = GameType.TMODLOADER;
     }
 
@@ -40,14 +42,14 @@ public class TModLoaderServer extends GameServer {
         try {
             Path source = enabledModsFile.contains("/") || enabledModsFile.contains("\\")
                 ? Path.of(enabledModsFile)
-                : Path.of("data", enabledModsFile);
+                : Path.of(dataDir, enabledModsFile);
             if (!Files.exists(source)) {
                 System.err.println("[TModLoaderServer] enabledModsFile not found: " + source.toAbsolutePath());
                 return;
             }
-            Files.createDirectories(MODS_ENABLED_PATH.getParent());
-            Files.copy(source, MODS_ENABLED_PATH, StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("[TModLoaderServer] Copied " + source.toAbsolutePath() + " -> " + MODS_ENABLED_PATH);
+            Files.createDirectories(modsEnabledPath.getParent());
+            Files.copy(source, modsEnabledPath, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("[TModLoaderServer] Copied " + source.toAbsolutePath() + " -> " + modsEnabledPath);
         } catch (Exception e) {
             System.err.println("[TModLoaderServer] Failed to copy enabledModsFile: " + e.getMessage());
         }
@@ -60,7 +62,7 @@ public class TModLoaderServer extends GameServer {
 
     @Override
     public String getWorkingDirectory() {
-        return "D:/steam/steamapps/common/tModLoader";
+        return serverDir;
     }
 
     @Override
@@ -233,7 +235,7 @@ public class TModLoaderServer extends GameServer {
         try {
             Path source = enabledModsFile.contains("/") || enabledModsFile.contains("\\")
                 ? Path.of(enabledModsFile)
-                : Path.of("data", enabledModsFile);
+                : Path.of(dataDir, enabledModsFile);
 
             if (!Files.exists(source)) {
                 broadcast(new GameActionEvent(id, GameAction.MOD_LIST, null, "mods file not found"));

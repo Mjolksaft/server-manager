@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -40,14 +41,34 @@ public class GameServerService {
     @Autowired
     private ObjectMapper mapper;
 
-    private static final Path DATA_DIR = Path.of("data");
-    private static final Path CONFIG_FILE = DATA_DIR.resolve("servers.json");
+    @Value("${terraria.server.dir}")
+    private String terrariaServerDir;
+
+    @Value("${terraria.worlds.dir}")
+    private String terrariaWorldsDir;
+
+    @Value("${tmodloader.server.dir}")
+    private String tmodloaderServerDir;
+
+    @Value("${tmodloader.worlds.dir}")
+    private String tmodloaderWorldsDir;
+
+    @Value("${tmodloader.mods.enabled.path}")
+    private String tmodloaderModsEnabledPath;
+
+    @Value("${server.data.dir}")
+    private String dataDir;
+
+    private Path DATA_DIR;
+    private Path CONFIG_FILE;
 
     private Map<Long, GameServer> serverMap = new HashMap<>();
     private AtomicLong idCounter = new AtomicLong(0);
 
     @PostConstruct
     public void init() {
+        DATA_DIR = Path.of(dataDir);
+        CONFIG_FILE = DATA_DIR.resolve("servers.json");
         try {
             if (Files.exists(CONFIG_FILE)) {
                 List<ServerConfig> configs = mapper.readValue(CONFIG_FILE.toFile(),
@@ -55,9 +76,12 @@ public class GameServerService {
                 for (ServerConfig cfg : configs) {
                     GameServer server;
                     if (cfg.type() == GameType.TMODLOADER) {
-                        server = new TModLoaderServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler, cfg.enabledModsFile());
+                        server = new TModLoaderServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler,
+                                cfg.enabledModsFile(), tmodloaderWorldsDir, tmodloaderServerDir, tmodloaderModsEnabledPath,
+                                dataDir);
                     } else {
-                        server = new TerrariaServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler, cfg.enabledModsFile());
+                        server = new TerrariaServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler,
+                                cfg.enabledModsFile(), terrariaWorldsDir, terrariaServerDir, dataDir);
                     }
                     serverMap.put(cfg.id(), server);
                     if (cfg.id() >= idCounter.get()) {
@@ -107,9 +131,12 @@ public class GameServerService {
 
         GameServer newInstance;
         if (request.type() == GameType.TMODLOADER) {
-            newInstance = new TModLoaderServer(id, request.port(), request.worldName(), logHandler, request.enabledModsFile());
+            newInstance = new TModLoaderServer(id, request.port(), request.worldName(), logHandler,
+                    request.enabledModsFile(), tmodloaderWorldsDir, tmodloaderServerDir, tmodloaderModsEnabledPath,
+                    dataDir);
         } else {
-            newInstance = new TerrariaServer(id, request.port(), request.worldName(), logHandler, request.enabledModsFile());
+            newInstance = new TerrariaServer(id, request.port(), request.worldName(), logHandler,
+                    request.enabledModsFile(), terrariaWorldsDir, terrariaServerDir, dataDir);
         }
 
         serverMap.put(id, newInstance);
@@ -269,5 +296,15 @@ public class GameServerService {
                     "Server with ID " + id + " not found");
         }
         return server;
+    }
+
+    public GameServer findByPort(int port) {
+        for (GameServer server : serverMap.values()) {
+            if (server.getPort() == port) {
+                return server;
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Server with port " + port + " not found");
     }
 }

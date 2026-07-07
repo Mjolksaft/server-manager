@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ModActionEvent(
-    int port,
+    Integer port,
     String action,
     String sender,
     String target,

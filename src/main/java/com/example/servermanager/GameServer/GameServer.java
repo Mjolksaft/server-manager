@@ -39,10 +39,12 @@ public abstract class GameServer {
     protected int port;
     protected String worldName;
     protected String serverPath;
+    protected String serverDir;
     protected String worldPath;
     protected ServerStates state = ServerStates.OFFLINE;
     protected GameType type;
     protected String enabledModsFile;
+    protected String dataDir;
 
     protected PtyProcess process;
     protected LogWebSocketHandler logHandler;
@@ -69,15 +71,17 @@ public abstract class GameServer {
                     .replaceAll("\\u001B\\][^\\u0007]*(\\u0007|\\u001B\\\\)", ""); // OSC sequences
         }
 
-    public GameServer(long id, int port, String worldName, String worldPath, String serverPath,
-            LogWebSocketHandler logHandler, String enabledModsFile) {
+    public GameServer(long id, int port, String worldName, String worldPath, String serverDir,
+            LogWebSocketHandler logHandler, String enabledModsFile, String dataDir) {
         this.id = id;
         this.port = port;
         this.worldName = worldName;
         this.logHandler = logHandler;
         this.worldPath = worldPath;
-        this.serverPath = serverPath;
+        this.serverDir = serverDir;
+        this.serverPath = serverDir.endsWith("/") || serverDir.endsWith("\\") ? serverDir : serverDir + "/";
         this.enabledModsFile = enabledModsFile;
+        this.dataDir = dataDir;
     }
 
     public abstract String getExecutableName();
@@ -470,6 +474,10 @@ public abstract class GameServer {
 
     public String getEnabledModsFile() {
         return enabledModsFile;
+    }
+
+    public String getDataDir() {
+        return dataDir;
     }
 
     protected void onBeforeStart() {

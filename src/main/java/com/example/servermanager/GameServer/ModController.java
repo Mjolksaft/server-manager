@@ -24,12 +24,22 @@ public class ModController {
     @Autowired
     private ObjectMapper mapper;
 
+    @Autowired
+    private GameServerService gameServerService;
+
     @PostMapping("/{port}/log")
     public ResponseEntity<ActionResponse> logAction(@PathVariable int port, @RequestBody ModActionEvent event) {
         try {
+            long serverId;
+            try {
+                serverId = gameServerService.findByPort(port).getId();
+            } catch (Exception e) {
+                serverId = -1;
+            }
+
             var obj = mapper.createObjectNode();
             obj.put("type", "game_action");
-            obj.put("serverId", -1);
+            obj.put("serverId", serverId);
             obj.put("port", port);
             obj.put("action", event.action() != null ? event.action() : "mod_event");
             obj.put("sender", event.sender());

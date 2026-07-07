@@ -24,7 +24,7 @@ document.addEventListener('click', e => {
 
 function api(path, opts = {}) {
     return fetch(BASE + path, {
-        headers: { 'Content-Type': 'application/json', ...opts.headers },
+        headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY, ...opts.headers },
         ...opts
     }).then(async r => {
         if (!r.ok) {
@@ -208,6 +208,7 @@ function connectWebSocket() {
     const url = `${proto}//${location.host}/ws/logs`;
     websocket = new WebSocket(url);
     websocket.onmessage = handleWsMessage;
+    websocket.onopen = () => { if (servers.length > 0) loadServers(); };
     websocket.onclose = () => setTimeout(connectWebSocket, 2000);
     websocket.onerror = () => websocket.close();
 }
@@ -491,5 +492,3 @@ function refreshMods() {
 
 loadServers();
 connectWebSocket();
-setInterval(loadServers, 5000);
-setInterval(() => { if (selectedId) refreshPlayers(); }, 10000);
