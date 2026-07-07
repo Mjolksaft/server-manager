@@ -42,6 +42,7 @@ public abstract class GameServer {
     protected String worldPath;
     protected ServerStates state = ServerStates.OFFLINE;
     protected GameType type;
+    protected String enabledModsFile;
 
     protected PtyProcess process;
     protected LogWebSocketHandler logHandler;
@@ -53,6 +54,13 @@ public abstract class GameServer {
     protected List<String> currentModList;
     protected CompletableFuture<Void> pendingPlayingQuery;
     protected List<String> currentPlayerList;
+    protected final List<String> connectedPlayers = Collections.synchronizedList(new ArrayList<>());
+
+    private static final java.util.regex.Pattern JOIN_PATTERN =
+        java.util.regex.Pattern.compile("(\\S+)\\s+has joined\\.\\s*$");
+    private static final java.util.regex.Pattern LEAVE_PATTERN =
+        java.util.regex.Pattern.compile("(\\S+)\\s+has left\\.\\s*$");
+
     private String stripAnsi(String line) {
             if (line == null) return null;
 
@@ -62,13 +70,14 @@ public abstract class GameServer {
         }
 
     public GameServer(long id, int port, String worldName, String worldPath, String serverPath,
-            LogWebSocketHandler logHandler) {
+            LogWebSocketHandler logHandler, String enabledModsFile) {
         this.id = id;
         this.port = port;
         this.worldName = worldName;
         this.logHandler = logHandler;
         this.worldPath = worldPath;
         this.serverPath = serverPath;
+        this.enabledModsFile = enabledModsFile;
     }
 
     public abstract String getExecutableName();
@@ -86,6 +95,9 @@ public abstract class GameServer {
     public void start() {
         try {
             broadcastState(new StateEvent(id, ServerStates.STARTING, "Server is Starting!"), ServerStates.STARTING);
+            connectedPlayers.clear();
+
+            onBeforeStart();
 
             String[] command = buildCommand();
 
@@ -108,6 +120,7 @@ public abstract class GameServer {
                         }
 
                         checkQueryResponse(cleaned);
+                        checkPlayerEvent(cleaned);
                     }
                 } catch (Exception err) {
                     System.out.println("Server output stream closed.");
@@ -127,6 +140,7 @@ public abstract class GameServer {
     public void stop() {
         try {
             broadcastState(new StateEvent(id, ServerStates.STOPPING, "Server is stopping"), ServerStates.STOPPING);
+            connectedPlayers.clear();
 
             OutputStream stream = process.getOutputStream();
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
@@ -400,52 +414,30 @@ public abstract class GameServer {
     }
 
     public List<PlayerResponse> queryPlayers() {
-        ensureProcessRunning();
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        pendingPlayingQuery = future;
-        currentPlayerList = Collections.synchronizedList(new ArrayList<>());
-
-        try {
-            OutputStream stream = process.getOutputStream();
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
-            writer.write("playing");
-            writer.newLine();
-            writer.flush();
-        } catch (Exception err) {
-            pendingPlayingQuery = null;
-            throw new RuntimeException("Failed to send playing command", err);
+        List<String> current;
+        synchronized (connectedPlayers) {
+            current = new ArrayList<>(connectedPlayers);
         }
-
-        try {
-            future.get(1, TimeUnit.SECONDS);
-        } catch (Exception e) {
-        }
-
-        pendingPlayingQuery = null;
-
-        List<String> rawLines;
-        synchronized (currentPlayerList) {
-            rawLines = new ArrayList<>(currentPlayerList);
-        }
-
-        return rawLines.stream()
-                .map(this::stripAnsi)
-                .filter(s -> !s.isEmpty())
-                .filter(s -> !s.contains("playing"))
-                .filter(s -> !s.strip().equals(":"))
-                .filter(s -> !s.matches("\\d+ players? connected\\.?"))
-                .map(s -> s.replaceFirst("^:\\s*", "").strip())
-                .map(s -> {
-                    int ipStart = s.lastIndexOf('(');
-                    int ipEnd = s.lastIndexOf(')');
-                    if (ipStart >= 0 && ipEnd > ipStart) {
-                        String name = s.substring(0, ipStart).strip();
-                        String ip = s.substring(ipStart + 1, ipEnd).strip();
-                        return new PlayerResponse(name, ip);
-                    }
-                    return new PlayerResponse(s, null);
-                })
+        return current.stream()
+                .map(name -> new PlayerResponse(name, null))
                 .toList();
+    }
+
+    private void checkPlayerEvent(String line) {
+        if (line == null) return;
+        java.util.regex.Matcher join = JOIN_PATTERN.matcher(line);
+        if (join.find()) {
+            String name = join.group(1);
+            if (!name.isEmpty() && !connectedPlayers.contains(name)) {
+                connectedPlayers.add(name);
+            }
+            return;
+        }
+        java.util.regex.Matcher leave = LEAVE_PATTERN.matcher(line);
+        if (leave.find()) {
+            String name = leave.group(1);
+            connectedPlayers.remove(name);
+        }
     }
 
     public long getId() {
@@ -474,6 +466,13 @@ public abstract class GameServer {
 
     public GameType getType() {
         return type;
+    }
+
+    public String getEnabledModsFile() {
+        return enabledModsFile;
+    }
+
+    protected void onBeforeStart() {
     }
 
     public void setPort(int newPort) {

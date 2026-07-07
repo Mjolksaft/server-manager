@@ -1,5 +1,3 @@
-Fix / change how we see how player join/ leave and add / remove them from a list or fix the current implementation 
-
 fix how errors work make them show up in the pretty consoel 
 
 remove status or remove so that there is not duplicate entries or keep status for the raw and rest for pretty 
@@ -8,18 +6,25 @@ remove status or remove so that there is not duplicate entries or keep status fo
 18:30:27[OFFLINE] Server is offline
 18:30:27[Status] : Saving before exit...
 18:30:30[STARTING] Server is Starting!
-
 18:30:37[Status] Server started
 18:30:37[RUNNING] Server has started!
 
 add so that we can always see the console and do commands at the same time not needing to change the view 
 maybe add a side bar to the right like the list of servers 
 
-save servers so that it persist between sessiosn 
 
-fix the modlist so it doesnt look like slop 
+>>>>>>>>>>>>>>>>>>>>
 
 Fix the starting button so that it goes blank when it has started or make it start/starting/running so the status is on the button 
 or start/stop so its a switch 
 
+fix the modlist so it doesnt look like slop 
 
+NEED TO SEPERATE MESSAGES PER SERVER SO THAT MESSAGES DONT BLEND INTO ONE SERVER CONSOLE
+
+FEATURE add so that per server have different enabled file if not enabled take a empty enabled file 
+C:\Users\kalla\Documents\My Games\Terraria\tModLoader\Mods\enabled.json
+
+FEATURE ADD SO THAT GIVE IS ABLE TO GIVE MULTIPLE ITEMS LIEK / GIVE DIRT BLOCK 100 WILL GIVE YOU 100 DIRT BLOCKS 
+
+Fix / change how we see how player join/ leave and add / remove them from a list or fix the current implementation 

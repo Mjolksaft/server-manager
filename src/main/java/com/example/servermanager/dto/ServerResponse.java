@@ -6,5 +6,6 @@ public record ServerResponse(
     String worldName,
     String serverPath,
     ServerStates state,
-    GameType type
+    GameType type,
+    String enabledModsFile
 ) {}

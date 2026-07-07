@@ -55,9 +55,9 @@ public class GameServerService {
                 for (ServerConfig cfg : configs) {
                     GameServer server;
                     if (cfg.type() == GameType.TMODLOADER) {
-                        server = new TModLoaderServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler);
+                        server = new TModLoaderServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler, cfg.enabledModsFile());
                     } else {
-                        server = new TerrariaServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler);
+                        server = new TerrariaServer(cfg.id(), cfg.port(), cfg.worldName(), logHandler, cfg.enabledModsFile());
                     }
                     serverMap.put(cfg.id(), server);
                     if (cfg.id() >= idCounter.get()) {
@@ -77,7 +77,7 @@ public class GameServerService {
             List<ServerConfig> configs = new ArrayList<>();
             for (GameServer server : serverMap.values()) {
                 configs.add(new ServerConfig(server.getId(), server.getPort(),
-                        server.getWorldName(), server.getType()));
+                        server.getWorldName(), server.getType(), server.getEnabledModsFile()));
             }
             mapper.writerWithDefaultPrettyPrinter().writeValue(CONFIG_FILE.toFile(), configs);
         } catch (IOException e) {
@@ -92,13 +92,14 @@ public class GameServerService {
                 server.getWorldName(),
                 server.getServerPath(),
                 server.getState(),
-                server.getType())).toList();
+                server.getType(),
+                server.getEnabledModsFile())).toList();
     }
 
     public ServerResponse getServer(long id) {
         GameServer server = findServerOrThrow(id);
         return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
-                server.getState(), server.getType());
+                server.getState(), server.getType(), server.getEnabledModsFile());
     }
 
     public ServerResponse create(ServerRequest request) {
@@ -106,15 +107,16 @@ public class GameServerService {
 
         GameServer newInstance;
         if (request.type() == GameType.TMODLOADER) {
-            newInstance = new TModLoaderServer(id, request.port(), request.worldName(), logHandler);
+            newInstance = new TModLoaderServer(id, request.port(), request.worldName(), logHandler, request.enabledModsFile());
         } else {
-            newInstance = new TerrariaServer(id, request.port(), request.worldName(), logHandler);
+            newInstance = new TerrariaServer(id, request.port(), request.worldName(), logHandler, request.enabledModsFile());
         }
 
         serverMap.put(id, newInstance);
         saveConfig();
         return new ServerResponse(newInstance.getId(), newInstance.getPort(), newInstance.getWorldName(),
-                newInstance.getServerPath(), newInstance.getState(), newInstance.getType());
+                newInstance.getServerPath(), newInstance.getState(), newInstance.getType(),
+                newInstance.getEnabledModsFile());
     }
 
     public void delete(long id) {
@@ -130,14 +132,14 @@ public class GameServerService {
         GameServer server = findServerOrThrow(id);
         server.start();
         return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
-                server.getState(), server.getType());
+                server.getState(), server.getType(), server.getEnabledModsFile());
     }
 
     public ServerResponse stop(long id) {
         GameServer server = findServerOrThrow(id);
         server.stop();
         return new ServerResponse(server.getId(), server.getPort(), server.getWorldName(), server.getServerPath(),
-                server.getState(), server.getType());
+                server.getState(), server.getType(), server.getEnabledModsFile());
     }
 
     public ServerStates getState(Long id) {
@@ -184,10 +186,10 @@ public class GameServerService {
         }
     }
 
-    public String giveItem(long id, String playerName, String itemName) {
+    public String giveItem(long id, String playerName, String itemName, Integer amount) {
         GameServer server = findServerOrThrow(id);
         if (server instanceof TModLoaderServer tmod) {
-            return tmod.giveItem(playerName, itemName);
+            return tmod.giveItem(playerName, itemName, amount);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Server " + id + " is not a TModLoader server");

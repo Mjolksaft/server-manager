@@ -3,6 +3,9 @@ package com.example.servermanager.GameServer;
 import java.io.BufferedWriter;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,14 +19,38 @@ import com.example.servermanager.dto.GameAction;
 import com.example.servermanager.dto.GameActionEvent;
 import com.example.servermanager.dto.ModResponse;
 
+import tools.jackson.core.type.TypeReference;
+
 public class TModLoaderServer extends GameServer {
 
-    public TModLoaderServer(long id, int port, String worldName, LogWebSocketHandler logHandler) {
+    private static final Path MODS_ENABLED_PATH = Path.of(
+        "C:/Users/kalla/Documents/My Games/Terraria/tModLoader/Mods/enabled.json");
+
+    public TModLoaderServer(long id, int port, String worldName, LogWebSocketHandler logHandler, String enabledModsFile) {
         super(id, port, worldName,
                 String.format("C:/Users/kalla/Documents/My Games/Terraria/tModLoader/Worlds/%s.wld", worldName),
                 "D:/steam/steamapps/common/tModLoader/",
-                logHandler);
+                logHandler, enabledModsFile);
         this.type = GameType.TMODLOADER;
+    }
+
+    @Override
+    protected void onBeforeStart() {
+        if (enabledModsFile == null || enabledModsFile.isBlank()) return;
+        try {
+            Path source = enabledModsFile.contains("/") || enabledModsFile.contains("\\")
+                ? Path.of(enabledModsFile)
+                : Path.of("data", enabledModsFile);
+            if (!Files.exists(source)) {
+                System.err.println("[TModLoaderServer] enabledModsFile not found: " + source.toAbsolutePath());
+                return;
+            }
+            Files.createDirectories(MODS_ENABLED_PATH.getParent());
+            Files.copy(source, MODS_ENABLED_PATH, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("[TModLoaderServer] Copied " + source.toAbsolutePath() + " -> " + MODS_ENABLED_PATH);
+        } catch (Exception e) {
+            System.err.println("[TModLoaderServer] Failed to copy enabledModsFile: " + e.getMessage());
+        }
     }
 
     @Override
@@ -124,16 +151,31 @@ public class TModLoaderServer extends GameServer {
         }
     }
 
-    public String giveItem(String playerName, String itemName) {
+    public String giveItem(String playerName, String itemName, Integer amount) {
         try {
             ensureProcessRunning();
             OutputStream stream = process.getOutputStream();
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream));
-            writer.write(String.format("give %s %s", playerName, itemName));
+
+            boolean hasPlayer = playerName != null && !playerName.isBlank();
+            boolean hasAmount = amount != null && amount > 0;
+
+            String cmd;
+            if (hasPlayer) {
+                cmd = hasAmount
+                    ? String.format("give %s %s %d", playerName, itemName, amount)
+                    : String.format("give %s %s", playerName, itemName);
+            } else {
+                cmd = hasAmount
+                    ? String.format("give %s %d", itemName, amount)
+                    : String.format("give %s", itemName);
+            }
+
+            writer.write(cmd);
             writer.newLine();
             writer.flush();
 
-            broadcast(new GameActionEvent(id, GameAction.GIVE, playerName + " " + itemName, null));
+            broadcast(new GameActionEvent(id, GameAction.GIVE, cmd, null));
             return "give command sent";
 
         } catch (Exception err) {
@@ -184,9 +226,31 @@ public class TModLoaderServer extends GameServer {
 
     @Override
     public List<ModResponse> getMods() {
-        List<ModResponse> mods = queryModList();
-        broadcast(new GameActionEvent(id, GameAction.MOD_LIST, null, null));
-        return mods;
+        if (enabledModsFile == null || enabledModsFile.isBlank()) {
+            broadcast(new GameActionEvent(id, GameAction.MOD_LIST, null, "no mods file configured"));
+            return List.of();
+        }
+        try {
+            Path source = enabledModsFile.contains("/") || enabledModsFile.contains("\\")
+                ? Path.of(enabledModsFile)
+                : Path.of("data", enabledModsFile);
+
+            if (!Files.exists(source)) {
+                broadcast(new GameActionEvent(id, GameAction.MOD_LIST, null, "mods file not found"));
+                return List.of();
+            }
+
+            List<String> modNames = mapper.readValue(source.toFile(), new TypeReference<List<String>>() {});
+            List<ModResponse> mods = modNames.stream().map(ModResponse::new).toList();
+
+            broadcast(new GameActionEvent(id, GameAction.MOD_LIST, null, null));
+            return mods;
+
+        } catch (Exception e) {
+            System.err.println("[TModLoaderServer] Failed to read enabled mods: " + e.getMessage());
+            broadcast(new ErrorEvent(id, "mod list", e.getMessage()));
+            throw new RuntimeException("Failed to read enabled mods: " + e.getMessage(), e);
+        }
     }
 
 

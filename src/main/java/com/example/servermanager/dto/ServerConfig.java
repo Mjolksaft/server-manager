@@ -4,5 +4,6 @@ public record ServerConfig(
     long id,
     int port,
     String worldName,
-    GameType type
+    GameType type,
+    String enabledModsFile
 ) {}

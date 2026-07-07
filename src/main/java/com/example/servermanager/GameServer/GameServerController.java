@@ -180,6 +180,6 @@ public class GameServerController {
 
     @PostMapping("/{id}/give")
     public ResponseEntity<ActionResponse> giveItem(@PathVariable Long id, @RequestBody GiveItemRequest request) {
-        return actionResponse("give", request.playerName(), service.giveItem(id, request.playerName(), request.itemName()));
+        return actionResponse("give", request.itemName(), service.giveItem(id, request.playerName(), request.itemName(), request.amount()));
     }
 }

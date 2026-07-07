@@ -2,6 +2,7 @@ let selectedId = null;
 let servers = [];
 let websocket = null;
 let toastTimeout = null;
+const logBuffers = {};
 
 const BASE = '';
 
@@ -92,6 +93,7 @@ function selectServer(id) {
     if (!s) { console.log('selectServer: server not found, aborting'); return; }
     renderServerList();
     updateTopbar(s);
+    renderConsoleForServer(id);
     refreshPlayers();
     refreshBans();
     const isTmod = s.type === 'TMODLOADER';
@@ -154,7 +156,8 @@ function createServer() {
     const body = {
         port: parseInt($('createPort').value),
         worldName: $('createWorld').value || 'World',
-        type: $('createType').value
+        type: $('createType').value,
+        enabledModsFile: $('createModsFile').value.trim() || null
     };
     api('/server/create', { method: 'POST', body: JSON.stringify(body) })
         .then(s => { closeCreateModal(); toast('Server created', 'success'); loadServers(); })
@@ -272,8 +275,32 @@ function handleWsMessage(event) {
             break;
     }
 
+    if (data.serverId !== undefined) {
+        if (!logBuffers[data.serverId]) logBuffers[data.serverId] = [];
+        logBuffers[data.serverId].push({ cls, text, pretty });
+        while (logBuffers[data.serverId].length > 500) logBuffers[data.serverId].shift();
+    }
+
+    if (data.serverId !== selectedId) return;
+
+    if (data.type === 'log' && /\b(?:joined|left)\b/i.test(data.text)) {
+        refreshPlayers();
+    }
+
     addLogLine($('console-raw'), cls, text);
     if (pretty) addLogLine($('console-pretty'), cls, text);
+}
+
+function renderConsoleForServer(id) {
+    const raw = $('console-raw');
+    const pretty = $('console-pretty');
+    raw.innerHTML = '';
+    pretty.innerHTML = '';
+    const buf = logBuffers[id] || [];
+    for (const entry of buf) {
+        addLogLine(raw, entry.cls, entry.text);
+        if (entry.pretty) addLogLine(pretty, entry.cls, entry.text);
+    }
 }
 
 // ── Players ──
@@ -438,9 +465,12 @@ function killEntity() {
 function giveItem() {
     const playerName = $('givePlayerInput').value.trim();
     const itemName = $('giveItemInput').value.trim();
-    if (!playerName || !itemName || (selectedId === null || selectedId === undefined)) return;
-    api(`/server/${selectedId}/give`, { method: 'POST', body: JSON.stringify({ playerName, itemName }) })
-        .then(r => { toast(r.message || 'Item given', 'success'); $('givePlayerInput').value = ''; $('giveItemInput').value = ''; })
+    const amountVal = $('giveAmountInput').value.trim();
+    if (!itemName || (selectedId === null || selectedId === undefined)) return;
+    const body = { playerName: playerName || null, itemName };
+    if (amountVal) body.amount = parseInt(amountVal);
+    api(`/server/${selectedId}/give`, { method: 'POST', body: JSON.stringify(body) })
+        .then(r => { toast(r.message || 'Item given', 'success'); $('givePlayerInput').value = ''; $('giveItemInput').value = ''; $('giveAmountInput').value = ''; })
         .catch(e => toast('Give failed: ' + e.message));
 }
 

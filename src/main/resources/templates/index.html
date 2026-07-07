@@ -201,9 +201,8 @@
 
         <div class="tab-content" id="tab-players">
             <div class="panel">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div style="margin-bottom:12px">
                     <h3>Connected Players</h3>
-                    <button class="btn btn-primary" onclick="refreshPlayers()" style="width:auto;padding:6px 14px">Refresh</button>
                 </div>
                 <div class="table-wrap">
                     <table>
@@ -282,8 +281,9 @@
                     </div>
                     <div class="card">
                         <label>Give Item</label>
-                        <input type="text" id="givePlayerInput" placeholder="Player name">
+                        <input type="text" id="givePlayerInput" placeholder="Player name (optional)">
                         <input type="text" id="giveItemInput" placeholder="Item name">
+                        <input type="number" id="giveAmountInput" placeholder="Amount (optional)" min="1">
                         <button class="btn btn-primary" onclick="giveItem()">Give</button>
                     </div>
                 </div>
@@ -293,9 +293,8 @@
 
         <div class="tab-content" id="tab-mods">
             <div class="panel">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div style="margin-bottom:12px">
                     <h3>Installed Mods</h3>
-                    <button class="btn btn-primary" onclick="refreshMods()" style="width:auto;padding:6px 14px">Refresh</button>
                 </div>
                 <div id="modList" class="empty-state">Select a tModLoader server</div>
             </div>
@@ -339,6 +338,8 @@
         <input type="number" id="createPort" value="7777" min="1024" max="65535">
         <label>World Name</label>
         <input type="text" id="createWorld" placeholder="MyWorld">
+        <label>Enabled Mods File</label>
+        <input type="text" id="createModsFile" placeholder="testEnabled.json">
         <div class="modal-actions">
             <button class="btn btn-cancel" onclick="closeCreateModal()">Cancel</button>
             <button class="btn btn-start" onclick="createServer()">Create</button>
