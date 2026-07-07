@@ -48,6 +48,7 @@ buildNumber.properties
 
 ### Server Manager ###
 src/main/resources/application.properties
+.opencode/agents/
 
 ### VisualStudioCode ###
 .vscode/*
