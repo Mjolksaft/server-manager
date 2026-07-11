@@ -1,13 +1,7 @@
 [ {
-  "id" : 10,
-  "port" : 7777,
-  "worldName" : "test",
-  "type" : "TMODLOADER",
-  "enabledModsFile" : "testEnabled.json"
-}, {
-  "id" : 11,
+  "id" : 19,
   "port" : 7778,
-  "worldName" : "test",
+  "worldName" : "FINAL",
   "type" : "TMODLOADER",
-  "enabledModsFile" : "test2Enabled.json"
+  "enabledModsFile" : "IEOR.json"
 } ]
