@@ -9,9 +9,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
     @JsonSubTypes.Type(value = StateEvent.class, name = "state"),
     @JsonSubTypes.Type(value = LogEvent.class,   name = "log"),
     @JsonSubTypes.Type(value = ErrorEvent.class,  name = "error"),
-    @JsonSubTypes.Type(value = GameActionEvent.class,  name = "game_action")
+    @JsonSubTypes.Type(value = GameActionEvent.class,  name = "game_action"),
+    @JsonSubTypes.Type(value = PingEvent.class,  name = "ping")
 })
 
-public sealed interface ServerEvent permits StateEvent, LogEvent, ErrorEvent, GameActionEvent {
+public sealed interface ServerEvent permits StateEvent, LogEvent, ErrorEvent, GameActionEvent, PingEvent {
     long serverId();
 }

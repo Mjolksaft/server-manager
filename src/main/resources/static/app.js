@@ -3,6 +3,8 @@ let servers = [];
 let websocket = null;
 let toastTimeout = null;
 const logBuffers = {};
+let pingInterval = null;
+let lastPingTimestamp = 0;
 
 const BASE = '';
 
@@ -208,9 +210,29 @@ function connectWebSocket() {
     const url = `${proto}//${location.host}/ws/logs`;
     websocket = new WebSocket(url);
     websocket.onmessage = handleWsMessage;
-    websocket.onopen = () => { if (servers.length > 0) loadServers(); };
-    websocket.onclose = () => setTimeout(connectWebSocket, 2000);
+    websocket.onopen = () => {
+        if (servers.length > 0) loadServers();
+        startPing();
+    };
+    websocket.onclose = () => { stopPing(); setTimeout(connectWebSocket, 2000); };
     websocket.onerror = () => websocket.close();
+}
+
+function startPing() {
+    stopPing();
+    lastPingTimestamp = Date.now();
+    pingInterval = setInterval(() => {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            lastPingTimestamp = Date.now();
+            websocket.send(JSON.stringify({ type: 'ping', timestamp: lastPingTimestamp }));
+        }
+    }, 3000);
+}
+
+function stopPing() {
+    if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+    $('pingDisplay').textContent = 'Ping: --';
+    $('pingDisplay').style.color = '#8b949e';
 }
 
 function categorizeLogLine(text) {
@@ -243,7 +265,14 @@ function addLogLine(consoleEl, cls, text) {
 function handleWsMessage(event) {
     let data;
     try { data = JSON.parse(event.data); } catch { data = { type: "raw", message: event.data }; }
-    console.log("WS raw:", event.data);
+
+    if (data.type === 'ping') {
+        const rtt = Date.now() - data.timestamp;
+        const el = $('pingDisplay');
+        el.textContent = `Ping: ${rtt}ms`;
+        el.style.color = rtt < 100 ? '#3fb950' : rtt < 250 ? '#d29922' : '#f85149';
+        return;
+    }
 
     let cls = 'level-info';
     let text = '';

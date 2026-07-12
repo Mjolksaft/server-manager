@@ -23,6 +23,18 @@ public class LogWebSocketHandler extends TextWebSocketHandler {
         sessions.remove(session); 
     }
 
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
+        try {
+            String payload = message.getPayload();
+            if (payload.contains("\"ping\"")) {
+                session.sendMessage(new TextMessage(payload));
+            }
+        } catch (Exception e) {
+            System.err.println("failed to handle ws message: " + e.getMessage());
+        }
+    }
+
     public void broadcast(String message) {
         for (WebSocketSession session : sessions) {
             try {
